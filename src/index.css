@@ -1,0 +1,763 @@
+/* Google Fonts: Outfit for sporty titles, Inter for high-readability UI */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg-color: #0b0f19;
+  --bg-gradient: linear-gradient(135deg, #0b0f19 0%, #151d30 100%);
+  --card-bg: rgba(22, 30, 49, 0.75);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --primary: #00ff88;
+  --primary-glow: rgba(0, 255, 136, 0.25);
+  --secondary: #00d2ff;
+  --secondary-glow: rgba(0, 210, 255, 0.2);
+  --accent: #ff007f;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --success: #00e676;
+  --error: #ff1744;
+  --warning: #ffea00;
+  --overlay-bg: rgba(7, 10, 19, 0.85);
+  
+  --font-title: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-color);
+  background-image: var(--bg-gradient);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: hidden;
+}
+
+/* Center mobile container on desktop, full screen on mobile */
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background: rgba(11, 15, 25, 0.95);
+  border-left: 1px solid var(--card-border);
+  border-right: 1px solid var(--card-border);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+}
+
+@media (min-width: 481px) {
+  body {
+    padding: 20px 0;
+  }
+  .app-container {
+    min-height: 90vh;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--card-border);
+  }
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Typography & Titles */
+h1, h2, h3, h4 {
+  font-family: var(--font-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Utility Card Styling */
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Inputs and Forms */
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.form-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+  background: rgba(255, 255, 255, 0.08);
+}
+.form-select {
+  background: rgba(15, 21, 36, 0.9);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+.form-select:focus {
+  outline: none;
+  border-color: var(--secondary);
+  box-shadow: 0 0 10px var(--secondary-glow);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn-primary {
+  background: var(--primary);
+  color: #0b0f19;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+.btn-primary:hover {
+  background: #00ff9d;
+  box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+}
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
+}
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.btn-danger {
+  background: var(--error);
+  color: var(--text-primary);
+  box-shadow: 0 4px 14px rgba(255, 23, 68, 0.3);
+}
+.btn-danger:hover {
+  background: #ff3d60;
+  box-shadow: 0 6px 20px rgba(255, 23, 68, 0.45);
+}
+.btn-accent {
+  background: var(--secondary);
+  color: #0b0f19;
+  box-shadow: 0 4px 14px var(--secondary-glow);
+}
+.btn-accent:hover {
+  background: #33e0ff;
+  box-shadow: 0 6px 20px rgba(0, 210, 255, 0.35);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Button Group / Row */
+.btn-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Format Option Selector cards */
+.format-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.format-card {
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.format-card.selected {
+  border-color: var(--primary);
+  background: rgba(0, 255, 136, 0.05);
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);
+}
+.format-card h4 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+.format-card p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Live Scoring Screen Specifics */
+.scoreboard-header {
+  text-align: center;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+}
+.score-main {
+  font-family: var(--font-title);
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.score-main span {
+  font-size: 1.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.score-overs {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.target-alert {
+  background: rgba(0, 210, 255, 0.08);
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--secondary);
+  margin-top: 8px;
+  font-weight: 500;
+  animation: pulse-cyan 2.5s infinite;
+}
+
+/* Match status badge */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+.badge-active {
+  background: rgba(0, 255, 136, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+.badge-secondary {
+  background: rgba(0, 210, 255, 0.15);
+  color: var(--secondary);
+  border: 1px solid rgba(0, 210, 255, 0.3);
+}
+
+/* Innings list in test format */
+.innings-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin-bottom: 16px;
+  font-size: 0.8rem;
+}
+.innings-history-item {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+}
+.innings-history-item.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Batsmen and Bowler layouts */
+.players-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.player-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+.player-card.active {
+  border-color: var(--primary);
+  background: rgba(0, 255, 136, 0.03);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.05);
+}
+.player-name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.player-name span {
+  color: var(--primary);
+  font-size: 0.75rem;
+}
+.player-stats {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: right;
+}
+.player-stats-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: normal;
+  display: block;
+}
+
+/* Bowler specific */
+.bowler-card {
+  border-color: var(--secondary);
+}
+.bowler-card.active {
+  background: rgba(0, 210, 255, 0.03);
+}
+
+/* Ball-by-ball bubbles */
+.over-balls-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+}
+.over-balls-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.balls-row {
+  display: flex;
+  gap: 6px;
+}
+.ball-bubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #334155;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-sm);
+  animation: pop-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.ball-bubble.run-4 {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: white;
+}
+.ball-bubble.run-6 {
+  background: #7c3aed;
+  border-color: #8b5cf6;
+  color: white;
+  animation: pulse-purple 1.5s infinite;
+}
+.ball-bubble.wicket {
+  background: var(--error);
+  border-color: #ff5252;
+  color: white;
+  animation: shake 0.3s ease-in-out;
+}
+.ball-bubble.extra {
+  background: #d97706;
+  border-color: #f59e0b;
+  color: white;
+}
+
+/* Keypad Grid for Scoring */
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.keypad-btn {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  height: 52px;
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.15s;
+}
+.keypad-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--text-secondary);
+}
+.keypad-btn span.label {
+  font-size: 0.65rem;
+  font-family: var(--font-body);
+  font-weight: normal;
+  color: var(--text-secondary);
+}
+.keypad-btn.runs {
+  background: rgba(255, 255, 255, 0.05);
+}
+.keypad-btn.runs:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.keypad-btn.boundary {
+  border-color: var(--secondary);
+  color: var(--secondary);
+  background: rgba(0, 210, 255, 0.05);
+}
+.keypad-btn.boundary:active {
+  background: rgba(0, 210, 255, 0.2);
+}
+.keypad-btn.extras {
+  border-color: var(--warning);
+  color: var(--warning);
+  background: rgba(255, 234, 0, 0.03);
+}
+.keypad-btn.extras:active {
+  background: rgba(255, 234, 0, 0.15);
+}
+.keypad-btn.out {
+  grid-column: span 2;
+  border-color: var(--error);
+  color: var(--error);
+  background: rgba(255, 23, 68, 0.05);
+}
+.keypad-btn.out:active {
+  background: rgba(255, 23, 68, 0.2);
+}
+.keypad-btn.undo {
+  grid-column: span 2;
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Modals and Overlays */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+.modal {
+  background: #111827;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  animation: scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.modal-title {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dismissal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dismissal-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-size: 0.9rem;
+}
+.dismissal-btn.selected {
+  background: rgba(255, 23, 68, 0.1);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* Summary Screen Tabs */
+.tabs-header {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 16px;
+  border: 1px solid var(--card-border);
+  overflow-x: auto;
+}
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: center;
+}
+.tab-btn.active {
+  background: var(--card-bg);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Scorecard Tables */
+.table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+.scorecard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+.scorecard-table th {
+  border-bottom: 1.5px solid var(--card-border);
+  padding: 8px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+.scorecard-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 10px 8px;
+}
+.scorecard-table tr:last-child td {
+  border-bottom: none;
+}
+.scorecard-table td.runs-col, .scorecard-table th.runs-col {
+  text-align: right;
+  font-weight: 700;
+}
+.scorecard-table td.stat-col, .scorecard-table th.stat-col {
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+.extras-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+.summary-result-banner {
+  text-align: center;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 210, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+}
+.summary-result-title {
+  font-family: var(--font-title);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+.summary-result-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Toss info block */
+.toss-info-block {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
+  margin-bottom: 16px;
+}
+
+/* Animations */
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes scale-up {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes pulse-purple {
+  0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+@keyframes pulse-cyan {
+  0% { border-color: rgba(0, 210, 255, 0.25); background: rgba(0, 210, 255, 0.06); }
+  50% { border-color: rgba(0, 210, 255, 0.65); background: rgba(0, 210, 255, 0.16); }
+  100% { border-color: rgba(0, 210, 255, 0.25); background: rgba(0, 210, 255, 0.06); }
+}
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+}
+
+/* Toss coin choice coin styling */
+.coin-selection-container {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 16px 0;
+}
+.coin-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-weight: bold;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+.coin-btn.selected {
+  border-color: var(--secondary);
+  background: rgba(0, 210, 255, 0.15);
+  box-shadow: 0 0 15px var(--secondary-glow);
+  transform: scale(1.08);
+}
+.coin-btn:active {
+  transform: scale(0.95);
+}
