@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, Users, ShieldAlert, Award } from 'lucide-react';
 
-export default function SetupScreen({ onSetupComplete }) {
+export default function SetupScreen({ onSetupComplete, onViewHistory }) {
   const [team1, setTeam1] = useState('Gully Kings');
   const [team2, setTeam2] = useState('Street Warriors');
   const [format, setFormat] = useState('limited'); // 'limited' or 'test'
@@ -125,9 +125,16 @@ export default function SetupScreen({ onSetupComplete }) {
           )}
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button type="submit" className="btn btn-primary">
             Proceed to Toss
+          </button>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={onViewHistory}
+          >
+            📂 View Match History
           </button>
         </div>
       </form>

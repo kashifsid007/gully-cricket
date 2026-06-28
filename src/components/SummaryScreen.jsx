@@ -6,6 +6,7 @@ export default function SummaryScreen({
   matchSettings,
   toss,
   onResetMatch,
+  onGoToHistory,
 }) {
   const [activeTab, setActiveTab] = useState(0); // Index of the selected innings in tabs
 
@@ -14,96 +15,80 @@ export default function SummaryScreen({
     const isTest = matchSettings.format === 'test';
     
     if (isTest) {
-      // Test Match results can be complex:
-      // Innings 0: Team A
-      // Innings 1: Team B
-      // Innings 2: Team A (or B if follow-on)
-      // Innings 3: Team B (or A)
-      
-      const playedInnings = inningsList.filter(inn => inn.balls > 0 || inn.declared || inn.wickets > 0);
+      const playedInnings = inningsList.filter(inn => inn.balls > 0 || inn.declared || inn.wickets > 0 || inn.allOutForce);
       const numInnings = playedInnings.length;
 
       if (numInnings < 2) {
         return "Match drawn (Incomplete data)";
       }
 
-      // Quick assessment:
-      // In Test match:
-      // Team A score = Innings 0 + Innings 2 (if normal) or Innings 0 + Innings 3 (if follow-on)
-      // Team B score = Innings 1 + Innings 3 (if normal) or Innings 1 + Innings 2 (if follow-on)
-      // Let's calculate total runs for each team:
       let team1Total = 0;
       let team2Total = 0;
-      let team1InningsCount = 0;
-      let team2InningsCount = 0;
 
       inningsList.forEach(inn => {
         if (inn.team === toss.battingFirst) {
           team1Total += inn.runs;
-          if (inn.balls > 0 || inn.declared || inn.wickets > 0) team1InningsCount++;
         } else {
           team2Total += inn.runs;
-          if (inn.balls > 0 || inn.declared || inn.wickets > 0) team2InningsCount++;
         }
       });
 
       const team1Name = toss.battingFirst;
       const team2Name = toss.bowlingFirst;
 
-      // If less than 4 innings played and it's not a win, it could be a draw:
-      // But we can check if the final chasing innings completed (e.g. target chased or all out).
-      // Let's look at the last played innings:
       const lastInningsIndex = playedInnings.length - 1;
       const lastInnings = playedInnings[lastInningsIndex];
       
       if (lastInningsIndex === 3) {
         // 4th Innings played
-        if (lastInnings.team === team1Name) {
-          // Team 1 was chasing in 4th innings
-          if (team1Total > team2Total) {
-            const wicketsLeft = 10 - lastInnings.wickets;
-            return `${team1Name} won by ${wicketsLeft} wickets!`;
-          } else if (lastInnings.wickets === 10) {
-            const margin = team2Total - team1Total;
-            return `${team2Name} won by ${margin} runs!`;
-          }
+        const chasingTeam = lastInnings.team;
+        const defendingTeam = lastInnings.bowlingTeam;
+        
+        const chasingTeamTotal = chasingTeam === team1Name ? team1Total : team2Total;
+        const defendingTeamTotal = defendingTeam === team1Name ? team1Total : team2Total;
+        
+        if (chasingTeamTotal > defendingTeamTotal) {
+          const wicketsLeft = 10 - lastInnings.wickets;
+          return `${chasingTeam} won by ${wicketsLeft} wickets!`;
         } else {
-          // Team 2 was chasing in 4th innings
-          if (team2Total > team1Total) {
-            const wicketsLeft = 10 - lastInnings.wickets;
-            return `${team2Name} won by ${wicketsLeft} wickets!`;
-          } else if (lastInnings.wickets === 10) {
-            const margin = team1Total - team2Total;
-            return `${team1Name} won by ${margin} runs!`;
+          const isFinished = lastInnings.wickets === 10 || lastInnings.declared || lastInnings.allOutForce;
+          if (isFinished) {
+            if (chasingTeamTotal < defendingTeamTotal) {
+              const margin = defendingTeamTotal - chasingTeamTotal;
+              return `${defendingTeam} won by ${margin} runs!`;
+            } else {
+              return "Match Tied!";
+            }
           }
         }
       }
 
-      // Check for Innings defeat or quick wins:
+      // Check for Innings defeat:
       if (lastInningsIndex === 2) {
-        // 3rd innings played. Check if team batting in 3rd innings is all out and still trails:
         const thirdInnings = playedInnings[2];
-        if (thirdInnings.team === team2Name) {
-          // Team 2 batted in 3rd innings (Follow-on scenario)
-          if (thirdInnings.wickets === 10 && team2Total < team1Total) {
-            const margin = team1Total - team2Total;
-            return `${team1Name} won by an innings and ${margin} runs!`;
-          }
-        } else {
-          // Team 1 batted in 3rd innings (Normal scenario, but they might have declared/got out and team 2 didn't bat yet)
-          // If Team 1 was all out in 3rd innings and their total is still less than Team 2's first innings score:
-          if (thirdInnings.wickets === 10 && team1Total < team2Total) {
-            const margin = team2Total - team1Total;
-            return `${team2Name} won by an innings and ${margin} runs!`;
+        const isFinished = thirdInnings.wickets === 10 || thirdInnings.declared || thirdInnings.allOutForce;
+        if (isFinished) {
+          if (thirdInnings.team === team2Name) {
+            // Team 2 batted in 3rd innings (Follow-on scenario)
+            if (team2Total < team1Total) {
+              const margin = team1Total - team2Total;
+              return `${team1Name} won by an innings and ${margin} runs!`;
+            }
+          } else {
+            // Team 1 batted in 3rd innings (Normal scenario)
+            if (team1Total < team2Total) {
+              const margin = team2Total - team1Total;
+              return `${team2Name} won by an innings and ${margin} runs!`;
+            }
           }
         }
       }
 
-      // Default fallback for incomplete Test match
+      // Default fallback for incomplete/ongoing Test match
       if (team1Total > team2Total) {
-        return `${team1Name} led by ${team1Total - team2Total} runs (Match Drawn/Ended)`;
+        return `${team1Name} led by ${team1Total - team2Total} runs (Match Ended)`;
       } else if (team2Total > team1Total) {
-        return `${team2Name} led by ${team2Total - team1Total} runs (Match Drawn/Ended)`;
+        return `${team2Name} led by ${team2Total - team1Total} runs (Match Ended)`;
       } else {
         return "Match Tied / Drawn!";
       }
@@ -121,7 +106,7 @@ export default function SummaryScreen({
       if (secondInnings.runs > firstInnings.runs) {
         const wicketsLeft = 10 - secondInnings.wickets;
         return `${team2Name} won by ${wicketsLeft} wickets!`;
-      } else if (secondInnings.wickets === 10 || (secondInnings.balls === (matchSettings.overs * 6))) {
+      } else if (secondInnings.wickets === 10 || secondInnings.declared || secondInnings.allOutForce || (secondInnings.balls === (matchSettings.overs * 6))) {
         if (firstInnings.runs > secondInnings.runs) {
           const margin = firstInnings.runs - secondInnings.runs;
           return `${team1Name} won by ${margin} runs!`;
@@ -311,10 +296,12 @@ export default function SummaryScreen({
         {activeInningsList[activeTab] && renderInningsDetails(activeInningsList[activeTab], activeTab)}
       </div>
 
-      {/* Footer / Reset button */}
-      <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
+      <div style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <button className="btn btn-primary" onClick={onResetMatch}>
           <RefreshCw size={18} /> Score New Match
+        </button>
+        <button className="btn btn-secondary" onClick={onGoToHistory}>
+          📂 View Match History
         </button>
       </div>
     </div>

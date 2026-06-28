@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Undo, RotateCcw, AlertTriangle, ShieldCheck, ArrowRight, UserPlus, HelpCircle } from 'lucide-react';
+import { Undo, RotateCcw, AlertTriangle, ShieldCheck, ArrowRight, UserPlus, HelpCircle, Edit2 } from 'lucide-react';
 
 export default function GameScreen({
   matchSettings,
@@ -13,6 +13,8 @@ export default function GameScreen({
   onUndo,
   onDeclare,
   onSwapBatsmen,
+  onRenamePlayer,
+  onAllOut,
   team1,
   team2,
 }) {
@@ -29,6 +31,16 @@ export default function GameScreen({
   const [nextBowlerName, setNextBowlerName] = useState('');
   
   const [showDeclareConfirm, setShowDeclareConfirm] = useState(false);
+  const [showAllOutConfirm, setShowAllOutConfirm] = useState(false);
+
+  // Player Renaming Modal State
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameType, setRenameType] = useState('striker'); // striker, nonStriker, bowler
+  const [renameOldName, setRenameOldName] = useState('');
+  const [renameNewName, setRenameNewName] = useState('');
+
+  // Animation Splash Screen State
+  const [activeAnimation, setActiveAnimation] = useState(null); // 'FOUR', 'SIX', 'WICKET', null
 
   // Helper calculations
   const totalRuns = currentInnings.runs;
@@ -57,16 +69,21 @@ export default function GameScreen({
     runsNeeded = target - totalRuns;
     ballsRemaining = (matchSettings.overs * 6) - totalBalls;
     reqRunRate = ballsRemaining > 0 ? ((runsNeeded / ballsRemaining) * 6).toFixed(2) : '0.00';
-  } else if (isTest) {
-    // Test match math
-    // 4th innings: Chasing target
-    // Wait, let's see how the innings are sequenced:
-    // Innings 0: Team A (1st Innings)
-    // Innings 1: Team B (1st Innings)
-    // Innings 2: Team A or Team B (2nd Innings - e.g. follow on or normal)
-    // Innings 3: Team B or Team A (2nd Innings - chasing target)
-    // We will compute the exact chase requirements dynamically in App.jsx and pass a target prop, 
-    // or let's calculate it here. For simplicity, let's assume we pass target if it's the final chasing innings.
+  } else if (isTest && currentInningsIndex === 3) {
+    // 4th innings of Test match: Chasing target
+    const battingTeam = currentInnings.team;
+    const bowlingTeam = currentInnings.bowlingTeam;
+    
+    // Find the first innings scored by this batting team
+    const battingInnings1 = inningsList.find((inn, idx) => idx < 3 && inn.team === battingTeam);
+    // Find the two innings scored by the bowling team
+    const bowlingInningsList = inningsList.filter((inn, idx) => idx < 3 && inn.team === bowlingTeam);
+    
+    if (battingInnings1 && bowlingInningsList.length === 2) {
+      const bowlingTeamTotal = bowlingInningsList[0].runs + bowlingInningsList[1].runs;
+      target = bowlingTeamTotal - battingInnings1.runs + 1;
+      runsNeeded = target - totalRuns;
+    }
   }
 
   // Wicket type handler
@@ -90,6 +107,10 @@ export default function GameScreen({
     setNewBatsmanName('');
     setWicketType('bowled');
     setWhoIsOut('striker');
+
+    // Trigger Wicket Animation!
+    setActiveAnimation('WICKET');
+    setTimeout(() => setActiveAnimation(null), 1800);
   };
 
   // Bowler change handler
@@ -108,19 +129,40 @@ export default function GameScreen({
 
   // Basic run scorer handler
   const handleScoring = (runs) => {
-    onBallScored({ type: 'runs', value: runs });
+    if (runs === 4) {
+      setActiveAnimation('FOUR');
+      setTimeout(() => setActiveAnimation(null), 1800);
+    } else if (runs === 6) {
+      setActiveAnimation('SIX');
+      setTimeout(() => setActiveAnimation(null), 1800);
+    }
     
-    // Check if over completed (and not a wicket or extras that keep same bowler)
-    // We check totalBalls + 1 since this runs before parent state completes.
-    // Actually, it's safer to let App.jsx trigger the bowler change modal when it receives the ball update
-    // But since App.jsx is the state source, we can just trigger bowler modal if the next ball is start of new over.
+    onBallScored({ type: 'runs', value: runs });
   };
 
-  // Check if current over is complete (6 legal balls)
-  // App.jsx will set a flag or we can check here.
-  const isOverComplete = totalBalls > 0 && totalBalls % 6 === 0 && currentInnings.overHistory.filter(x => !x.includes('Wd') && !x.includes('Nb')).length === 6;
-  // Actually, standard cricket logic: 6 legal balls in current over = over complete.
-  // Let's check legal balls in current over:
+  // Helper to open rename modal
+  const handleRenameClick = (type, oldName) => {
+    setRenameType(type);
+    setRenameOldName(oldName);
+    setRenameNewName(oldName);
+    setShowRenameModal(true);
+  };
+
+  // Submit rename handler
+  const handleRenameSubmit = (e) => {
+    e.preventDefault();
+    if (!renameNewName.trim()) return;
+    onRenamePlayer(renameType, renameOldName, renameNewName.trim());
+    setShowRenameModal(false);
+  };
+
+  // Submit all-out handler
+  const handleAllOutSubmit = () => {
+    setShowAllOutConfirm(false);
+    onAllOut();
+  };
+
+  // Check legal balls in current over:
   const legalBallsInOver = currentInnings.overHistory.filter(x => !x.includes('wd') && !x.includes('nb')).length;
 
   const triggerNewBowlerPrompt = () => {
@@ -136,8 +178,37 @@ export default function GameScreen({
     return 'ball-bubble';
   };
 
+  // Render floating animation particles
+  const renderParticles = (type) => {
+    let emojis = ['🌟', '🏏', '🥎', '✨', '⚡'];
+    if (type === 'WICKET') {
+      emojis = ['☝️', '🔴', '💥', '💀', '❌'];
+    }
+    return Array.from({ length: 15 }).map((_, i) => {
+      const left = Math.random() * 90 + 5; // 5% to 95%
+      const delay = Math.random() * 0.8; // 0s to 0.8s
+      const duration = 1.2 + Math.random() * 0.8; // 1.2s to 2s
+      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+      
+      return (
+        <span 
+          key={i} 
+          className="particle"
+          style={{
+            left: `${left}%`,
+            animationDelay: `${delay}s`,
+            animationDuration: `${duration}s`
+          }}
+        >
+          {emoji}
+        </span>
+      );
+    });
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+      
       {/* Scoreboard Header */}
       <div className="scoreboard-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -166,7 +237,7 @@ export default function GameScreen({
                 color: idx === currentInningsIndex ? 'var(--primary)' : 'var(--text-muted)',
                 fontWeight: idx === currentInningsIndex ? '700' : 'normal'
               }}>
-                I{idx+1}: {inn.runs}/{inn.wickets}
+                I{idx+1}: {inn.runs}/{inn.wickets}{inn.declared ? 'd' : ''}
               </span>
             ))}
           </div>
@@ -174,7 +245,7 @@ export default function GameScreen({
 
         {target !== null && runsNeeded > 0 && (
           <div className="target-alert">
-            🎯 {runsNeeded} runs needed from {ballsRemaining} balls (Req: {reqRunRate} RPO)
+            🎯 {runsNeeded} runs needed {ballsRemaining !== null ? `from ${ballsRemaining} balls (Req: ${reqRunRate} RPO)` : 'to win'}
           </div>
         )}
       </div>
@@ -182,10 +253,18 @@ export default function GameScreen({
       {/* Players Section */}
       <div className="players-container">
         {/* Striker */}
-        <div className={`player-card active`}>
+        <div className="player-card active">
           <div>
-            <div className="player-name">
-              🏏 {strikerName} <span style={{ color: 'var(--primary)' }}>(Striker)</span>
+            <div className="player-name" style={{ display: 'flex', alignItems: 'center' }}>
+              🏏 {strikerName} 
+              <button 
+                className="edit-name-btn"
+                onClick={() => handleRenameClick('striker', strikerName)}
+                title="Rename Striker"
+              >
+                <Edit2 size={12} />
+              </button>
+              <span style={{ color: 'var(--primary)', marginLeft: '8px' }}>(Striker)</span>
             </div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               SR: {strikerStats.balls > 0 ? ((strikerStats.runs / strikerStats.balls) * 100).toFixed(1) : '0.0'}
@@ -200,8 +279,18 @@ export default function GameScreen({
         {/* Non-Striker */}
         <div className="player-card" style={{ cursor: 'pointer' }} onClick={onSwapBatsmen} title="Click to swap strike manually">
           <div>
-            <div className="player-name" style={{ color: 'var(--text-secondary)' }}>
+            <div className="player-name" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
               🚶‍♂️ {nonStrikerName}
+              <button 
+                className="edit-name-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRenameClick('nonStriker', nonStrikerName);
+                }}
+                title="Rename Non-Striker"
+              >
+                <Edit2 size={12} />
+              </button>
             </div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               SR: {nonStrikerStats.balls > 0 ? ((nonStrikerStats.runs / nonStrikerStats.balls) * 100).toFixed(1) : '0.0'}
@@ -216,8 +305,15 @@ export default function GameScreen({
         {/* Bowler */}
         <div className="player-card bowler-card active">
           <div>
-            <div className="player-name" style={{ color: 'var(--secondary)' }}>
+            <div className="player-name" style={{ color: 'var(--secondary)', display: 'flex', alignItems: 'center' }}>
               🥎 {bowlerName}
+              <button 
+                className="edit-name-btn"
+                onClick={() => handleRenameClick('bowler', bowlerName)}
+                title="Rename Bowler"
+              >
+                <Edit2 size={12} />
+              </button>
             </div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Econ: {bowlerStats.balls > 0 ? ((bowlerStats.runs / bowlerStats.balls) * 6).toFixed(2) : '0.00'}
@@ -256,7 +352,8 @@ export default function GameScreen({
           textAlign: 'center', 
           padding: '12px',
           animation: 'pulse-cyan 2s infinite',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          marginBottom: '16px'
         }} onClick={triggerNewBowlerPrompt}>
           <span style={{ color: 'var(--secondary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             🔄 Over Complete! Click to change bowler <ArrowRight size={16} />
@@ -300,22 +397,110 @@ export default function GameScreen({
           </button>
         </div>
 
-        {/* Undo and Extra options (Declare) */}
-        <div className="btn-group">
-          <button className="btn btn-secondary" onClick={onUndo} style={{ flex: 1 }}>
+        {/* Undo and Extra options */}
+        <div className="btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={onUndo} style={{ flex: '1 1 30%' }}>
             <Undo size={16} /> Undo Ball
           </button>
           
-          {/* Declare Option (Highly relevant for Test matching) */}
+          {isTest && (
+            <button 
+              className="btn btn-danger" 
+              onClick={() => setShowDeclareConfirm(true)}
+              style={{ flex: '1 1 30%' }}
+            >
+              🏁 Declare
+            </button>
+          )}
+
           <button 
-            className="btn btn-danger" 
-            onClick={() => setShowDeclareConfirm(true)}
-            style={{ flex: 1 }}
+            className="btn btn-secondary" 
+            onClick={() => setShowAllOutConfirm(true)}
+            style={{ 
+              flex: '1 1 30%', 
+              background: 'rgba(255, 145, 0, 0.15)', 
+              color: 'var(--warning)', 
+              border: '1px solid rgba(255, 145, 0, 0.4)' 
+            }}
           >
-            🏁 Declare Innings
+            🛑 All Out
           </button>
         </div>
       </div>
+
+      {/* RENAME PLAYER MODAL OVERLAY */}
+      {showRenameModal && (
+        <div className="overlay">
+          <div className="modal">
+            <h3 className="modal-title">✏️ Rename {renameType.replace(/^\w/, c => c.toUpperCase())}</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '8px' }}>
+              Modify the name of <strong>{renameOldName}</strong>. Stats will be retained.
+            </p>
+            
+            <form onSubmit={handleRenameSubmit} className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">New Player Name</label>
+              <input 
+                type="text"
+                className="form-input"
+                value={renameNewName}
+                onChange={(e) => setRenameNewName(e.target.value)}
+                maxLength={20}
+                required
+                autoFocus
+              />
+              
+              <div className="btn-group" style={{ marginTop: '16px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowRenameModal(false)}
+                  style={{ flex: 1 }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  Save Name
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MANUAL ALL OUT CONFIRMATION MODAL */}
+      {showAllOutConfirm && (
+        <div className="overlay">
+          <div className="modal" style={{ textAlign: 'center' }}>
+            <AlertTriangle size={48} color="var(--warning)" style={{ margin: '0 auto 8px' }} />
+            <h3 className="modal-title" style={{ color: 'var(--warning)' }}>Declare Team All Out?</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+              Are you sure you want to end this batting innings for <strong>{currentInnings.team}</strong> as All Out? 
+              This will transition to the next innings/match summary.
+            </p>
+            
+            <div className="btn-group" style={{ marginTop: '16px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowAllOutConfirm(false)}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleAllOutSubmit}
+                style={{ flex: 1 }}
+              >
+                Yes, All Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* WICKET MODAL OVERLAY */}
       {showWicketModal && (
@@ -471,6 +656,29 @@ export default function GameScreen({
                 Yes, Declare
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* BROADCAST ANIMATION SPLASH OVERLAY */}
+      {activeAnimation && (
+        <div 
+          className={`animation-overlay ${activeAnimation.toLowerCase()}`}
+          onClick={() => setActiveAnimation(null)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="particles-container">
+            {renderParticles(activeAnimation)}
+          </div>
+          <h1 className="animation-text-glow">
+            {activeAnimation === 'FOUR' && 'FOUR! 🚀'}
+            {activeAnimation === 'SIX' && 'MAXIMUM! ☄️'}
+            {activeAnimation === 'WICKET' && 'OUT! 🔴'}
+          </h1>
+          <div className="animation-subtext">
+            {activeAnimation === 'FOUR' && 'Splendid Boundary! 🏏'}
+            {activeAnimation === 'SIX' && 'Massive Hit over the ropes! 🚀'}
+            {activeAnimation === 'WICKET' && 'What a breakthrough! ☝️'}
           </div>
         </div>
       )}

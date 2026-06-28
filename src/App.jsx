@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SetupScreen from './components/SetupScreen';
 import TossScreen from './components/TossScreen';
 import StrikerSetupScreen from './components/StrikerSetupScreen';
 import GameScreen from './components/GameScreen';
 import SummaryScreen from './components/SummaryScreen';
+import HistoryScreen from './components/HistoryScreen';
 
 // Deep cloning helper
 const cloneState = (stateObj) => JSON.parse(JSON.stringify(stateObj));
@@ -15,6 +16,7 @@ const createInnings = (battingTeam, bowlingTeam) => ({
   wickets: 0,
   balls: 0,
   declared: false,
+  allOutForce: false,
   extras: { wide: 0, noBall: 0, bye: 0, legBye: 0 },
   batsmen: {},
   bowlers: {},
@@ -23,7 +25,8 @@ const createInnings = (battingTeam, bowlingTeam) => ({
 });
 
 export default function App() {
-  const [screen, setScreen] = useState('SETUP'); // SETUP, TOSS, STRIKER_SETUP, GAME, SUMMARY
+  const [screen, setScreen] = useState('SETUP'); // SETUP, TOSS, STRIKER_SETUP, GAME, SUMMARY, HISTORY
+  const [prevScreen, setPrevScreen] = useState('SETUP');
   const [matchSettings, setMatchSettings] = useState(null);
   const [toss, setToss] = useState(null);
   
@@ -36,6 +39,39 @@ export default function App() {
   
   // History stack for Undo
   const [history, setHistory] = useState([]);
+
+  // Active match ID for history
+  const [currentMatchId, setCurrentMatchId] = useState(null);
+
+  // Auto-save game to local storage
+  useEffect(() => {
+    if (currentMatchId && screen !== 'SETUP' && screen !== 'HISTORY') {
+      const matches = JSON.parse(localStorage.getItem('gully_cricket_matches') || '[]');
+      const matchIndex = matches.findIndex(m => m.id === currentMatchId);
+
+      const matchData = {
+        id: currentMatchId,
+        date: matchIndex >= 0 ? matches[matchIndex].date : new Date().toLocaleString(),
+        matchSettings,
+        toss,
+        inningsList,
+        currentInningsIndex,
+        strikerName,
+        nonStrikerName,
+        bowlerName,
+        history,
+        screen,
+        status: screen === 'SUMMARY' ? 'Completed' : 'Incomplete'
+      };
+
+      if (matchIndex >= 0) {
+        matches[matchIndex] = matchData;
+      } else {
+        matches.unshift(matchData);
+      }
+      localStorage.setItem('gully_cricket_matches', JSON.stringify(matches));
+    }
+  }, [currentMatchId, screen, inningsList, currentInningsIndex, strikerName, nonStrikerName, bowlerName, history, matchSettings, toss]);
 
   // Save currentState to history
   const pushHistory = (currentList, currentIndex, striker, nonStriker, bowler) => {
@@ -54,6 +90,7 @@ export default function App() {
   // 1. Setup completed
   const handleSetupComplete = (settings) => {
     setMatchSettings(settings);
+    setCurrentMatchId(Date.now().toString());
     setScreen('TOSS');
   };
 
@@ -117,6 +154,50 @@ export default function App() {
     const temp = strikerName;
     setStrikerName(nonStrikerName);
     setNonStrikerName(temp);
+  };
+
+  // Rename a player mid-game and update scorecard keys
+  const handleRenamePlayer = (type, oldName, newName) => {
+    if (!newName || !newName.trim()) return;
+    const trimmedNewName = newName.trim();
+    if (trimmedNewName === oldName) return;
+
+    pushHistory(inningsList, currentInningsIndex, strikerName, nonStrikerName, bowlerName);
+
+    setInningsList(prev => {
+      const copy = cloneState(prev);
+      const cur = copy[currentInningsIndex];
+      
+      // Rename in batting stats
+      if ((type === 'striker' || type === 'nonStriker') && cur.batsmen[oldName]) {
+        cur.batsmen[trimmedNewName] = { ...cur.batsmen[oldName] };
+        delete cur.batsmen[oldName];
+      }
+
+      // Rename in bowling stats
+      if (type === 'bowler' && cur.bowlers[oldName]) {
+        cur.bowlers[trimmedNewName] = { ...cur.bowlers[oldName] };
+        delete cur.bowlers[oldName];
+      }
+
+      return copy;
+    });
+
+    if (type === 'striker') setStrikerName(trimmedNewName);
+    if (type === 'nonStriker') setNonStrikerName(trimmedNewName);
+    if (type === 'bowler') setBowlerName(trimmedNewName);
+  };
+
+  // Declare current innings as "All Out" (for fewer than 11 players)
+  const handleAllOut = () => {
+    pushHistory(inningsList, currentInningsIndex, strikerName, nonStrikerName, bowlerName);
+
+    const updatedInningsList = cloneState(inningsList);
+    const curInnings = updatedInningsList[currentInningsIndex];
+    curInnings.allOutForce = true;
+    
+    setInningsList(updatedInningsList);
+    checkInningsAndMatchStatus(updatedInningsList, currentInningsIndex, strikerName, nonStrikerName, bowlerName, true);
   };
 
   // 4. Ball Scored engine
@@ -317,14 +398,14 @@ export default function App() {
   };
 
   // Engine transition check
-  const checkInningsAndMatchStatus = (updatedInningsList, index, striker, nonStriker, bowler) => {
+  const checkInningsAndMatchStatus = (updatedInningsList, index, striker, nonStriker, bowler, forcedAllOut = false) => {
     const isTest = matchSettings.format === 'test';
     const curInnings = updatedInningsList[index];
     const team1Name = toss.battingFirst;
     const team2Name = toss.bowlingFirst;
     
     if (isTest) {
-      const allOut = curInnings.wickets === 10;
+      const allOut = curInnings.wickets === 10 || forcedAllOut || curInnings.allOutForce;
       const declared = curInnings.declared;
 
       if (allOut || declared) {
@@ -435,7 +516,7 @@ export default function App() {
 
     } else {
       // --- LIMITED OVERS ---
-      const allOut = curInnings.wickets === 10;
+      const allOut = curInnings.wickets === 10 || forcedAllOut || curInnings.allOutForce;
       const oversCompleted = curInnings.balls >= (matchSettings.overs * 6);
 
       if (index === 0) {
@@ -468,12 +549,44 @@ export default function App() {
     setNonStrikerName('');
     setBowlerName('');
     setHistory([]);
+    setCurrentMatchId(null);
+  };
+
+  // Continue a match from History Screen
+  const handleContinueMatch = (match) => {
+    setCurrentMatchId(match.id);
+    setMatchSettings(match.matchSettings);
+    setToss(match.toss);
+    setInningsList(match.inningsList);
+    setCurrentInningsIndex(match.currentInningsIndex);
+    setStrikerName(match.strikerName);
+    setNonStrikerName(match.nonStrikerName);
+    setBowlerName(match.bowlerName);
+    setHistory(match.history || []);
+    setScreen(match.screen);
+  };
+
+  // View Scorecard of a match from History Screen
+  const handleViewStats = (match) => {
+    setCurrentMatchId(match.id);
+    setMatchSettings(match.matchSettings);
+    setToss(match.toss);
+    setInningsList(match.inningsList);
+    setCurrentInningsIndex(match.currentInningsIndex);
+    setStrikerName(match.strikerName);
+    setNonStrikerName(match.nonStrikerName);
+    setBowlerName(match.bowlerName);
+    setHistory(match.history || []);
+    setScreen('SUMMARY');
   };
 
   return (
     <div className="app-container">
       {screen === 'SETUP' && (
-        <SetupScreen onSetupComplete={handleSetupComplete} />
+        <SetupScreen 
+          onSetupComplete={handleSetupComplete} 
+          onViewHistory={() => { setPrevScreen('SETUP'); setScreen('HISTORY'); }} 
+        />
       )}
       
       {screen === 'TOSS' && (
@@ -505,6 +618,8 @@ export default function App() {
           onUndo={handleUndo}
           onDeclare={handleDeclare}
           onSwapBatsmen={handleSwapBatsmen}
+          onRenamePlayer={handleRenamePlayer}
+          onAllOut={handleAllOut}
           team1={matchSettings.team1}
           team2={matchSettings.team2}
         />
@@ -516,8 +631,18 @@ export default function App() {
           matchSettings={matchSettings}
           toss={toss}
           onResetMatch={handleResetMatch}
+          onGoToHistory={() => { setPrevScreen('SUMMARY'); setScreen('HISTORY'); }}
+        />
+      )}
+
+      {screen === 'HISTORY' && (
+        <HistoryScreen 
+          onContinueMatch={handleContinueMatch}
+          onViewStats={handleViewStats}
+          onBack={() => setScreen(prevScreen)}
         />
       )}
     </div>
   );
 }
+
