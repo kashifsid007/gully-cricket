@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Undo, RotateCcw, AlertTriangle, ShieldCheck, ArrowRight, UserPlus, HelpCircle, Edit2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Undo, ArrowRight, Edit2, Share2, Moon } from 'lucide-react';
+import BroadcastScorecard from './BroadcastScorecard';
+import BroadcastPlayerBanner from './BroadcastPlayerBanner';
+import ShareModal from './ShareModal';
+import { getPlayerByName, autoRegisterPlayer, getPlayerInitials } from '../utils/playerDb';
 
 export default function GameScreen({
   matchSettings,
-  toss,
   inningsList,
   currentInningsIndex,
   strikerName,
@@ -15,8 +18,7 @@ export default function GameScreen({
   onSwapBatsmen,
   onRenamePlayer,
   onAllOut,
-  team1,
-  team2,
+  onDayStumps,
 }) {
   const currentInnings = inningsList[currentInningsIndex];
   const isTest = matchSettings.format === 'test';
@@ -32,6 +34,10 @@ export default function GameScreen({
   
   const [showDeclareConfirm, setShowDeclareConfirm] = useState(false);
   const [showAllOutConfirm, setShowAllOutConfirm] = useState(false);
+  const [showStumpsConfirm, setShowStumpsConfirm] = useState(false);
+
+  // Share Modal State
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Player Renaming Modal State
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -41,6 +47,21 @@ export default function GameScreen({
 
   // Animation Splash Screen State
   const [activeAnimation, setActiveAnimation] = useState(null); // 'FOUR', 'SIX', 'WICKET', null
+
+  // Test Match Day Stumps state
+  const [stumpsStatus, setStumpsStatus] = useState(null);
+
+  // Auto-register current players in Player DB
+  useEffect(() => {
+    if (strikerName) autoRegisterPlayer(strikerName);
+    if (nonStrikerName) autoRegisterPlayer(nonStrikerName);
+    if (bowlerName) autoRegisterPlayer(bowlerName);
+  }, [strikerName, nonStrikerName, bowlerName]);
+
+  // Fetch player profiles from DB (for photo avatars)
+  const strikerProfile = getPlayerByName(strikerName);
+  const nonStrikerProfile = getPlayerByName(nonStrikerName);
+  const bowlerProfile = getPlayerByName(bowlerName);
 
   // Helper calculations
   const totalRuns = currentInnings.runs;
@@ -63,20 +84,15 @@ export default function GameScreen({
   const isLimited = matchSettings.format === 'limited';
 
   if (isLimited && currentInningsIndex === 1) {
-    // Second innings of Limited Overs match
     const firstInnings = inningsList[0];
     target = firstInnings.runs + 1;
     runsNeeded = target - totalRuns;
     ballsRemaining = (matchSettings.overs * 6) - totalBalls;
     reqRunRate = ballsRemaining > 0 ? ((runsNeeded / ballsRemaining) * 6).toFixed(2) : '0.00';
   } else if (isTest && currentInningsIndex === 3) {
-    // 4th innings of Test match: Chasing target
     const battingTeam = currentInnings.team;
     const bowlingTeam = currentInnings.bowlingTeam;
-    
-    // Find the first innings scored by this batting team
     const battingInnings1 = inningsList.find((inn, idx) => idx < 3 && inn.team === battingTeam);
-    // Find the two innings scored by the bowling team
     const bowlingInningsList = inningsList.filter((inn, idx) => idx < 3 && inn.team === bowlingTeam);
     
     if (battingInnings1 && bowlingInningsList.length === 2) {
@@ -86,29 +102,46 @@ export default function GameScreen({
     }
   }
 
+  // Handle Day Stumps (Test format)
+  const handleDeclareStumps = () => {
+    // Calculate day number based on total balls or innings
+    let dayNum = 1;
+    const totalMatchBalls = inningsList.reduce((sum, inn) => sum + inn.balls, 0);
+    // Assume ~90 overs per day in test match
+    dayNum = Math.min(5, Math.floor(totalMatchBalls / (90 * 6)) + 1);
+    
+    const label = `Day ${dayNum} Stumps`;
+    setStumpsStatus(label);
+    setShowStumpsConfirm(false);
+
+    if (onDayStumps) {
+      onDayStumps(label);
+    }
+  };
+
   // Wicket type handler
   const handleWicketSubmit = (e) => {
     e.preventDefault();
     if (!newBatsmanName.trim()) return;
     if (newBatsmanName.trim() === strikerName || newBatsmanName.trim() === nonStrikerName) {
-      alert("New batsman cannot be the same as the current batsmen!");
+      alert("New batsman cannot be the same as current batsmen!");
       return;
     }
+
+    autoRegisterPlayer(newBatsmanName.trim());
 
     onBallScored({
       type: 'wicket',
       wicketType,
-      whoIsOut, // 'striker' or 'nonStriker'
+      whoIsOut,
       newBatsman: newBatsmanName.trim(),
     });
 
-    // Reset local state
     setShowWicketModal(false);
     setNewBatsmanName('');
     setWicketType('bowled');
     setWhoIsOut('striker');
 
-    // Trigger Wicket Animation!
     setActiveAnimation('WICKET');
     setTimeout(() => setActiveAnimation(null), 1800);
   };
@@ -118,6 +151,8 @@ export default function GameScreen({
     e.preventDefault();
     if (!nextBowlerName.trim()) return;
     
+    autoRegisterPlayer(nextBowlerName.trim());
+
     onBallScored({
       type: 'bowler_change',
       nextBowler: nextBowlerName.trim()
@@ -152,6 +187,7 @@ export default function GameScreen({
   const handleRenameSubmit = (e) => {
     e.preventDefault();
     if (!renameNewName.trim()) return;
+    autoRegisterPlayer(renameNewName.trim());
     onRenamePlayer(renameType, renameOldName, renameNewName.trim());
     setShowRenameModal(false);
   };
@@ -178,158 +214,63 @@ export default function GameScreen({
     return 'ball-bubble';
   };
 
-  // Render floating animation particles
-  const renderParticles = (type) => {
-    let emojis = ['🌟', '🏏', '🥎', '✨', '⚡'];
-    if (type === 'WICKET') {
-      emojis = ['☝️', '🔴', '💥', '💀', '❌'];
-    }
-    return Array.from({ length: 15 }).map((_, i) => {
-      const left = Math.random() * 90 + 5; // 5% to 95%
-      const delay = Math.random() * 0.8; // 0s to 0.8s
-      const duration = 1.2 + Math.random() * 0.8; // 1.2s to 2s
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-      
-      return (
-        <span 
-          key={i} 
-          className="particle"
-          style={{
-            left: `${left}%`,
-            animationDelay: `${delay}s`,
-            animationDuration: `${duration}s`
-          }}
-        >
-          {emoji}
-        </span>
-      );
-    });
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', paddingBottom: '70px' }}>
       
-      {/* Scoreboard Header */}
-      <div className="scoreboard-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="badge badge-active">
-            {isTest ? `Innings ${currentInningsIndex + 1}` : 'Live Match'}
-          </span>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
-            {currentInnings.team} Batting
-          </span>
-        </div>
-        
-        <div className="score-row">
-          <div className="score-main">
-            {totalRuns}<span>/{totalWickets}</span>
-          </div>
-          <div className="score-overs">
-            Overs {oversStr} {isLimited && `(of ${matchSettings.overs})`}
-          </div>
-        </div>
+      {/* Top Header Actions (Share & Day Stumps) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <span className="badge badge-active">
+          {isTest ? `Innings ${currentInningsIndex + 1}` : 'Live Match'}
+        </span>
 
-        {isTest && (
-          <div className="toss-info-block" style={{ marginTop: '8px', marginBottom: 0 }}>
-            {inningsList.map((inn, idx) => (
-              <span key={idx} style={{ 
-                marginRight: '12px', 
-                color: idx === currentInningsIndex ? 'var(--primary)' : 'var(--text-muted)',
-                fontWeight: idx === currentInningsIndex ? '700' : 'normal'
-              }}>
-                I{idx+1}: {inn.runs}/{inn.wickets}{inn.declared ? 'd' : ''}
-              </span>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {isTest && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setShowStumpsConfirm(true)}
+              style={{ padding: '4px 10px', fontSize: '0.75rem', gap: '4px', background: 'rgba(147, 51, 234, 0.2)', color: '#c084fc', border: '1px solid rgba(147, 51, 234, 0.4)' }}
+            >
+              <Moon size={12} /> Stumps
+            </button>
+          )}
 
-        {target !== null && runsNeeded > 0 && (
-          <div className="target-alert">
-            🎯 {runsNeeded} runs needed {ballsRemaining !== null ? `from ${ballsRemaining} balls (Req: ${reqRunRate} RPO)` : 'to win'}
-          </div>
-        )}
-      </div>
-
-      {/* Players Section */}
-      <div className="players-container">
-        {/* Striker */}
-        <div className="player-card active">
-          <div>
-            <div className="player-name" style={{ display: 'flex', alignItems: 'center' }}>
-              🏏 {strikerName} 
-              <button 
-                className="edit-name-btn"
-                onClick={() => handleRenameClick('striker', strikerName)}
-                title="Rename Striker"
-              >
-                <Edit2 size={12} />
-              </button>
-              <span style={{ color: 'var(--primary)', marginLeft: '8px' }}>(Striker)</span>
-            </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              SR: {strikerStats.balls > 0 ? ((strikerStats.runs / strikerStats.balls) * 100).toFixed(1) : '0.0'}
-            </span>
-          </div>
-          <div className="player-stats">
-            {strikerStats.runs} <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>({strikerStats.balls})</span>
-            <span className="player-stats-label">4s: {strikerStats.fours} | 6s: {strikerStats.sixes}</span>
-          </div>
-        </div>
-
-        {/* Non-Striker */}
-        <div className="player-card" style={{ cursor: 'pointer' }} onClick={onSwapBatsmen} title="Click to swap strike manually">
-          <div>
-            <div className="player-name" style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-              🚶‍♂️ {nonStrikerName}
-              <button 
-                className="edit-name-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRenameClick('nonStriker', nonStrikerName);
-                }}
-                title="Rename Non-Striker"
-              >
-                <Edit2 size={12} />
-              </button>
-            </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              SR: {nonStrikerStats.balls > 0 ? ((nonStrikerStats.runs / nonStrikerStats.balls) * 100).toFixed(1) : '0.0'}
-            </span>
-          </div>
-          <div className="player-stats" style={{ color: 'var(--text-secondary)' }}>
-            {nonStrikerStats.runs} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>({nonStrikerStats.balls})</span>
-            <span className="player-stats-label">4s: {nonStrikerStats.fours} | 6s: {nonStrikerStats.sixes}</span>
-          </div>
-        </div>
-
-        {/* Bowler */}
-        <div className="player-card bowler-card active">
-          <div>
-            <div className="player-name" style={{ color: 'var(--secondary)', display: 'flex', alignItems: 'center' }}>
-              🥎 {bowlerName}
-              <button 
-                className="edit-name-btn"
-                onClick={() => handleRenameClick('bowler', bowlerName)}
-                title="Rename Bowler"
-              >
-                <Edit2 size={12} />
-              </button>
-            </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Econ: {bowlerStats.balls > 0 ? ((bowlerStats.runs / bowlerStats.balls) * 6).toFixed(2) : '0.00'}
-            </span>
-          </div>
-          <div className="player-stats" style={{ color: 'var(--secondary)' }}>
-            {bowlerStats.wickets}-{bowlerStats.runs}
-            <span className="player-stats-label">
-              Overs: {Math.floor(bowlerStats.balls / 6)}.{bowlerStats.balls % 6}
-            </span>
-          </div>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowShareModal(true)}
+            style={{ padding: '4px 10px', fontSize: '0.75rem', gap: '4px', background: 'rgba(0, 229, 255, 0.15)', color: 'var(--secondary)', border: '1px solid rgba(0, 229, 255, 0.3)' }}
+          >
+            <Share2 size={12} /> Share
+          </button>
         </div>
       </div>
+
+      {/* Broadcast TV Style Scorecard Header */}
+      <BroadcastScorecard
+        teamName={currentInnings.team}
+        runs={totalRuns}
+        wickets={totalWickets}
+        balls={totalBalls}
+        isTest={isTest}
+        inningsIndex={currentInningsIndex}
+        stumpsStatus={stumpsStatus}
+        targetInfo={runsNeeded > 0 ? { runsNeeded, ballsRemaining, reqRunRate } : null}
+        inningsList={inningsList}
+      />
+
+      {/* TV BROADCAST HORIZONTAL PLAYER BANNER WITH POP-OUT AVATARS (Matching Reference Image) */}
+      <BroadcastPlayerBanner
+        strikerName={strikerName}
+        strikerStats={strikerStats}
+        nonStrikerName={nonStrikerName}
+        nonStrikerStats={nonStrikerStats}
+        bowlerName={bowlerName}
+        bowlerStats={bowlerStats}
+        onSwapBatsmen={onSwapBatsmen}
+        onRenameClick={handleRenameClick}
+      />
 
       {/* Over History Bubble Feed */}
-      <div className="over-balls-container">
+      <div className="over-balls-container" style={{ marginTop: '12px' }}>
         <span className="over-balls-label">This Over ({legalBallsInOver}/6):</span>
         <div className="balls-row">
           {currentInnings.overHistory.length === 0 ? (
@@ -350,19 +291,20 @@ export default function GameScreen({
           background: 'rgba(0, 210, 255, 0.1)', 
           border: '1.5px dashed var(--secondary)', 
           textAlign: 'center', 
-          padding: '12px',
+          padding: '10px',
           animation: 'pulse-cyan 2s infinite',
           cursor: 'pointer',
-          marginBottom: '16px'
+          marginTop: '8px',
+          marginBottom: '8px'
         }} onClick={triggerNewBowlerPrompt}>
-          <span style={{ color: 'var(--secondary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <span style={{ color: 'var(--secondary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem' }}>
             🔄 Over Complete! Click to change bowler <ArrowRight size={16} />
           </span>
         </div>
       )}
 
       {/* Scoring Keypad Controls */}
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px' }}>
         <div className="keypad-grid">
           {/* Normal Runs */}
           <button className="keypad-btn runs" onClick={() => handleScoring(0)} disabled={legalBallsInOver === 6}>0<span className="label">Dot</span></button>
@@ -397,17 +339,17 @@ export default function GameScreen({
           </button>
         </div>
 
-        {/* Undo and Extra options */}
+        {/* Action button row */}
         <div className="btn-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={onUndo} style={{ flex: '1 1 30%' }}>
-            <Undo size={16} /> Undo Ball
+          <button className="btn btn-secondary" onClick={onUndo} style={{ flex: '1 1 28%', padding: '8px' }}>
+            <Undo size={14} /> Undo Ball
           </button>
           
           {isTest && (
             <button 
               className="btn btn-danger" 
               onClick={() => setShowDeclareConfirm(true)}
-              style={{ flex: '1 1 30%' }}
+              style={{ flex: '1 1 28%', padding: '8px' }}
             >
               🏁 Declare
             </button>
@@ -417,7 +359,8 @@ export default function GameScreen({
             className="btn btn-secondary" 
             onClick={() => setShowAllOutConfirm(true)}
             style={{ 
-              flex: '1 1 30%', 
+              flex: '1 1 28%', 
+              padding: '8px',
               background: 'rgba(255, 145, 0, 0.15)', 
               color: 'var(--warning)', 
               border: '1px solid rgba(255, 145, 0, 0.4)' 
@@ -428,13 +371,30 @@ export default function GameScreen({
         </div>
       </div>
 
-      {/* RENAME PLAYER MODAL OVERLAY */}
+      {/* SHARE SCORECARD MODAL */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        matchSettings={matchSettings}
+        currentInnings={currentInnings}
+        strikerName={strikerName}
+        strikerStats={strikerStats}
+        nonStrikerName={nonStrikerName}
+        nonStrikerStats={nonStrikerStats}
+        bowlerName={bowlerName}
+        bowlerStats={bowlerStats}
+        stumpsStatus={stumpsStatus}
+        inningsList={inningsList}
+        currentInningsIndex={currentInningsIndex}
+      />
+
+      {/* RENAME PLAYER MODAL */}
       {showRenameModal && (
         <div className="overlay">
           <div className="modal">
             <h3 className="modal-title">✏️ Rename {renameType.replace(/^\w/, c => c.toUpperCase())}</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '8px' }}>
-              Modify the name of <strong>{renameOldName}</strong>. Stats will be retained.
+              Modify name of <strong>{renameOldName}</strong>. Stats will be preserved.
             </p>
             
             <form onSubmit={handleRenameSubmit} className="form-group" style={{ marginBottom: 0 }}>
@@ -448,11 +408,11 @@ export default function GameScreen({
                 required
                 autoFocus
               />
-              
-              <div className="btn-group" style={{ marginTop: '16px' }}>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                 <button 
                   type="button" 
-                  className="btn btn-secondary"
+                  className="btn btn-secondary" 
                   onClick={() => setShowRenameModal(false)}
                   style={{ flex: 1 }}
                 >
@@ -460,7 +420,7 @@ export default function GameScreen({
                 </button>
                 <button 
                   type="submit" 
-                  className="btn btn-primary"
+                  className="btn btn-primary" 
                   style={{ flex: 1 }}
                 >
                   Save Name
@@ -471,111 +431,76 @@ export default function GameScreen({
         </div>
       )}
 
-      {/* MANUAL ALL OUT CONFIRMATION MODAL */}
-      {showAllOutConfirm && (
-        <div className="overlay">
-          <div className="modal" style={{ textAlign: 'center' }}>
-            <AlertTriangle size={48} color="var(--warning)" style={{ margin: '0 auto 8px' }} />
-            <h3 className="modal-title" style={{ color: 'var(--warning)' }}>Declare Team All Out?</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Are you sure you want to end this batting innings for <strong>{currentInnings.team}</strong> as All Out? 
-              This will transition to the next innings/match summary.
-            </p>
-            
-            <div className="btn-group" style={{ marginTop: '16px' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setShowAllOutConfirm(false)}
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
-              <button 
-                className="btn btn-danger" 
-                onClick={handleAllOutSubmit}
-                style={{ flex: 1 }}
-              >
-                Yes, All Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WICKET MODAL OVERLAY */}
+      {/* WICKET MODAL */}
       {showWicketModal && (
         <div className="overlay">
           <div className="modal">
-            <h3 className="modal-title">🔴 Dismissal Details</h3>
-            
-            <div className="form-group">
-              <label className="form-label">Who is OUT?</label>
-              <div className="btn-group" style={{ marginBottom: '10px' }}>
-                <button 
-                  type="button"
-                  className={`btn ${whoIsOut === 'striker' ? 'btn-danger' : 'btn-secondary'}`}
-                  onClick={() => setWhoIsOut('striker')}
-                  style={{ flex: 1, padding: '10px' }}
-                >
-                  Striker ({strikerName})
-                </button>
-                <button 
-                  type="button"
-                  className={`btn ${whoIsOut === 'nonStriker' ? 'btn-danger' : 'btn-secondary'}`}
-                  onClick={() => setWhoIsOut('nonStriker')}
-                  style={{ flex: 1, padding: '10px' }}
-                >
-                  Non-Striker ({nonStrikerName})
-                </button>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Type of Wicket</label>
-              <div className="dismissal-grid">
-                {['bowled', 'caught', 'run out', 'stumped', 'lbw'].map((type) => (
+            <h3 className="modal-title">🛑 Wicket / Dismissal</h3>
+            <form onSubmit={handleWicketSubmit}>
+              <div className="form-group">
+                <label className="form-label">Who is Out?</label>
+                <div className="btn-group">
                   <button 
-                    key={type}
-                    type="button"
-                    className={`dismissal-btn ${wicketType === type ? 'selected' : ''}`}
-                    onClick={() => setWicketType(type)}
+                    type="button" 
+                    className={`btn ${whoIsOut === 'striker' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setWhoIsOut('striker')}
                   >
-                    {type.toUpperCase()}
+                    🏏 Striker ({strikerName})
                   </button>
-                ))}
+                  <button 
+                    type="button" 
+                    className={`btn ${whoIsOut === 'nonStriker' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setWhoIsOut('nonStriker')}
+                  >
+                    🚶‍♂️ Non-Striker ({nonStrikerName})
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <form onSubmit={handleWicketSubmit} className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Name of New Batsman</label>
-              <input 
-                type="text"
-                className="form-input"
-                placeholder="Enter new batsman..."
-                value={newBatsmanName}
-                onChange={(e) => setNewBatsmanName(e.target.value)}
-                maxLength={20}
-                required
-              />
-              
-              <div className="btn-group" style={{ marginTop: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Dismissal Type</label>
+                <select 
+                  className="form-select"
+                  value={wicketType}
+                  onChange={(e) => setWicketType(e.target.value)}
+                >
+                  <option value="bowled">Bowled</option>
+                  <option value="caught">Caught</option>
+                  <option value="run out">Run Out</option>
+                  <option value="lbw">LBW</option>
+                  <option value="stumped">Stumped</option>
+                  <option value="hit wicket">Hit Wicket</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">New Batsman Name</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="Enter incoming batsman name..."
+                  value={newBatsmanName}
+                  onChange={(e) => setNewBatsmanName(e.target.value)}
+                  required
+                  maxLength={20}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                 <button 
                   type="button" 
                   className="btn btn-secondary" 
-                  onClick={() => {
-                    setShowWicketModal(false);
-                    setNewBatsmanName('');
-                  }}
+                  onClick={() => setShowWicketModal(false)}
                   style={{ flex: 1 }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn btn-danger"
+                  className="btn btn-danger" 
                   style={{ flex: 1 }}
                 >
-                  Confirm Out
+                  Confirm Wicket
                 </button>
               </div>
             </form>
@@ -583,31 +508,32 @@ export default function GameScreen({
         </div>
       )}
 
-      {/* BOWLER CHANGE MODAL OVERLAY */}
+      {/* NEW BOWLER MODAL */}
       {showBowlerModal && (
         <div className="overlay">
           <div className="modal">
-            <h3 className="modal-title">🥎 Bowler Change</h3>
+            <h3 className="modal-title">🔄 Over Complete - Select Bowler</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '8px' }}>
-              Select next bowler for the new over. Previous bowler: <strong>{bowlerName}</strong>
+              Current Bowler: <strong>{bowlerName}</strong>. Enter next bowler.
             </p>
-            
-            <form onSubmit={handleBowlerSubmit} className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">New Bowler Name</label>
-              <input 
-                type="text"
-                className="form-input"
-                placeholder="Enter bowler name..."
-                value={nextBowlerName}
-                onChange={(e) => setNextBowlerName(e.target.value)}
-                maxLength={20}
-                required
-              />
-              
-              <div className="btn-group" style={{ marginTop: '16px' }}>
+            <form onSubmit={handleBowlerSubmit}>
+              <div className="form-group">
+                <label className="form-label">Next Bowler Name</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="Enter bowler name..."
+                  value={nextBowlerName}
+                  onChange={(e) => setNextBowlerName(e.target.value)}
+                  required
+                  maxLength={20}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                 <button 
                   type="button" 
-                  className="btn btn-secondary"
+                  className="btn btn-secondary" 
                   onClick={() => setShowBowlerModal(false)}
                   style={{ flex: 1 }}
                 >
@@ -615,10 +541,10 @@ export default function GameScreen({
                 </button>
                 <button 
                   type="submit" 
-                  className="btn btn-accent"
+                  className="btn btn-primary" 
                   style={{ flex: 1 }}
                 >
-                  Start Over
+                  Set Bowler
                 </button>
               </div>
             </form>
@@ -629,30 +555,16 @@ export default function GameScreen({
       {/* DECLARE INNINGS CONFIRMATION MODAL */}
       {showDeclareConfirm && (
         <div className="overlay">
-          <div className="modal" style={{ textAlign: 'center' }}>
-            <AlertTriangle size={48} color="var(--error)" style={{ margin: '0 auto 8px' }} />
-            <h3 className="modal-title" style={{ color: 'var(--error)' }}>Declare Innings?</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Are you sure you want to declare the innings for <strong>{currentInnings.team}</strong> at <strong>{totalRuns}/{totalWickets}</strong>? 
-              This will immediately transition to the next innings and cannot be undone.
+          <div className="modal">
+            <h3 className="modal-title">🏁 Declare Innings?</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '16px' }}>
+              Are you sure you want to declare <strong>{currentInnings.team}</strong>'s innings at {totalRuns}/{totalWickets}?
             </p>
-            
-            <div className="btn-group" style={{ marginTop: '16px' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setShowDeclareConfirm(false)}
-                style={{ flex: 1 }}
-              >
-                No, Keep Playing
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowDeclareConfirm(false)} style={{ flex: 1 }}>
+                Cancel
               </button>
-              <button 
-                className="btn btn-danger" 
-                onClick={() => {
-                  setShowDeclareConfirm(false);
-                  onDeclare();
-                }}
-                style={{ flex: 1 }}
-              >
+              <button className="btn btn-danger" onClick={() => { setShowDeclareConfirm(false); onDeclare(); }} style={{ flex: 1 }}>
                 Yes, Declare
               </button>
             </div>
@@ -660,25 +572,46 @@ export default function GameScreen({
         </div>
       )}
 
-      {/* BROADCAST ANIMATION SPLASH OVERLAY */}
-      {activeAnimation && (
-        <div 
-          className={`animation-overlay ${activeAnimation.toLowerCase()}`}
-          onClick={() => setActiveAnimation(null)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="particles-container">
-            {renderParticles(activeAnimation)}
+      {/* ALL OUT CONFIRMATION MODAL */}
+      {showAllOutConfirm && (
+        <div className="overlay">
+          <div className="modal">
+            <h3 className="modal-title">🛑 Force All Out?</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '16px' }}>
+              Declare <strong>{currentInnings.team}</strong> all out with fewer than 10 wickets?
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowAllOutConfirm(false)} style={{ flex: 1 }}>
+                Cancel
+              </button>
+              <button className="btn btn-danger" onClick={handleAllOutSubmit} style={{ flex: 1 }}>
+                Yes, End Innings
+              </button>
+            </div>
           </div>
-          <h1 className="animation-text-glow">
-            {activeAnimation === 'FOUR' && 'FOUR! 🚀'}
-            {activeAnimation === 'SIX' && 'MAXIMUM! ☄️'}
-            {activeAnimation === 'WICKET' && 'OUT! 🔴'}
-          </h1>
-          <div className="animation-subtext">
-            {activeAnimation === 'FOUR' && 'Splendid Boundary! 🏏'}
-            {activeAnimation === 'SIX' && 'Massive Hit over the ropes! 🚀'}
-            {activeAnimation === 'WICKET' && 'What a breakthrough! ☝️'}
+        </div>
+      )}
+
+      {/* DAY STUMPS CONFIRMATION MODAL */}
+      {showStumpsConfirm && (
+        <div className="overlay">
+          <div className="modal">
+            <h3 className="modal-title">🌙 Declare Day Stumps?</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '16px' }}>
+              This will mark the end of today's play in this Test match. The score <strong>{currentInnings.team} {totalRuns}/{totalWickets}</strong> will be saved as Day Stumps and you can resume anytime from the Incomplete Matches tab!
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-secondary" onClick={() => setShowStumpsConfirm(false)} style={{ flex: 1 }}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleDeclareStumps} 
+                style={{ flex: 1, background: 'linear-gradient(135deg, #7e22ce, #9333ea)' }}
+              >
+                Declare Day Stumps
+              </button>
+            </div>
           </div>
         </div>
       )}
