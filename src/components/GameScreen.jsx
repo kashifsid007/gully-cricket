@@ -4,6 +4,7 @@ import BroadcastScorecard from './BroadcastScorecard';
 import BroadcastPlayerBanner from './BroadcastPlayerBanner';
 import ShareModal from './ShareModal';
 import { getPlayerByName, autoRegisterPlayer, getPlayerInitials } from '../utils/playerDb';
+import { getTeamSquad } from '../utils/squadDb';
 
 export default function GameScreen({
   matchSettings,
@@ -22,6 +23,9 @@ export default function GameScreen({
 }) {
   const currentInnings = inningsList[currentInningsIndex];
   const isTest = matchSettings.format === 'test';
+  
+  const battingSquad = getTeamSquad(currentInnings.team);
+  const bowlingSquad = getTeamSquad(currentInnings.bowlingTeam);
   
   // Local modal states
   const [showWicketModal, setShowWicketModal] = useState(false);
@@ -474,11 +478,32 @@ export default function GameScreen({
               </div>
 
               <div className="form-group">
-                <label className="form-label">New Batsman Name</label>
+                <label className="form-label">Pick Incoming Batsman ({currentInnings.team} Squad)</label>
+                <div className="squad-quick-chips" style={{ marginBottom: '8px' }}>
+                  {battingSquad.map((p, idx) => {
+                    const isAlreadyOut = currentInnings.batsmen[p.name]?.out;
+                    const isCurrentlyBatting = p.name === strikerName || p.name === nonStrikerName;
+                    const isSelected = newBatsmanName === p.name;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={isAlreadyOut || isCurrentlyBatting}
+                        onClick={() => setNewBatsmanName(p.name)}
+                        className={`squad-chip ${isSelected ? 'active-striker' : ''} ${(isAlreadyOut || isCurrentlyBatting) ? 'disabled-chip' : ''}`}
+                        title={isAlreadyOut ? 'Already Out' : isCurrentlyBatting ? 'On Pitch' : `Pick ${p.name}`}
+                      >
+                        <span className="chip-avatar">{p.name.substring(0, 2).toUpperCase()}</span>
+                        <span className="chip-name">{p.name}</span>
+                        {isAlreadyOut && <span style={{ fontSize: '0.6rem', color: 'var(--error)', marginLeft: '2px' }}>✕</span>}
+                      </button>
+                    );
+                  })}
+                </div>
                 <input 
                   type="text" 
                   className="form-input" 
-                  placeholder="Enter incoming batsman name..."
+                  placeholder="Or type incoming batsman name..."
                   value={newBatsmanName}
                   onChange={(e) => setNewBatsmanName(e.target.value)}
                   required
@@ -518,11 +543,30 @@ export default function GameScreen({
             </p>
             <form onSubmit={handleBowlerSubmit}>
               <div className="form-group">
-                <label className="form-label">Next Bowler Name</label>
+                <label className="form-label">Pick Next Bowler ({currentInnings.bowlingTeam} Squad)</label>
+                <div className="squad-quick-chips" style={{ marginBottom: '8px' }}>
+                  {bowlingSquad.map((p, idx) => {
+                    const isCurrentBowler = p.name === bowlerName;
+                    const isSelected = nextBowlerName === p.name;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={isCurrentBowler}
+                        onClick={() => setNextBowlerName(p.name)}
+                        className={`squad-chip ${isSelected ? 'active-bowler' : ''} ${isCurrentBowler ? 'disabled-chip' : ''}`}
+                        title={isCurrentBowler ? 'Cannot bowl consecutive overs' : `Pick ${p.name}`}
+                      >
+                        <span className="chip-avatar bowler-avatar">{p.name.substring(0, 2).toUpperCase()}</span>
+                        <span className="chip-name">{p.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
                 <input 
                   type="text" 
                   className="form-input" 
-                  placeholder="Enter bowler name..."
+                  placeholder="Or type bowler name..."
                   value={nextBowlerName}
                   onChange={(e) => setNextBowlerName(e.target.value)}
                   required

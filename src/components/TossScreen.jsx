@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { HelpCircle, RefreshCw } from 'lucide-react';
+import { HelpCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 
-export default function TossScreen({ team1, team2, onTossComplete }) {
+export default function TossScreen({ team1, team2, onTossComplete, onBack }) {
   const [tossWinner, setTossWinner] = useState('');
   const [decision, setDecision] = useState(''); // 'bat' or 'bowl'
   const [isSimulating, setIsSimulating] = useState(false);
@@ -46,8 +46,20 @@ export default function TossScreen({ team1, team2, onTossComplete }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center', margin: '24px 0' }}>
+    <div className="toss-screen-container" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1 }}>
+      {onBack && (
+        <div style={{ alignSelf: 'flex-start', marginBottom: '10px' }}>
+          <button 
+            type="button" 
+            onClick={onBack}
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+          >
+            <ArrowLeft size={14} /> Back to Setup
+          </button>
+        </div>
+      )}
+      <div style={{ textAlign: 'center', margin: '4px 0 16px' }}>
         <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(0, 210, 255, 0.1)', borderRadius: '50%', marginBottom: '12px' }}>
           <HelpCircle size={40} color="#00d2ff" />
         </div>

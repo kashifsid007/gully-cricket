@@ -25,7 +25,7 @@ export default function SetupScreen({ onSetupComplete, onViewHistory }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '70px' }}>
+    <div className="setup-screen-container" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1 }}>
       {/* Broadcast Header Badge */}
       <div style={{ textAlign: 'center', margin: '16px 0 14px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: 'rgba(0, 229, 255, 0.12)', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '20px', marginBottom: '8px' }}>

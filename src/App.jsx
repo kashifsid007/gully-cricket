@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SetupScreen from './components/SetupScreen';
 import TossScreen from './components/TossScreen';
 import StrikerSetupScreen from './components/StrikerSetupScreen';
@@ -7,6 +7,7 @@ import SummaryScreen from './components/SummaryScreen';
 import HistoryScreen from './components/HistoryScreen';
 import PlayersTab from './components/PlayersTab';
 import IncompleteMatchesTab from './components/IncompleteMatchesTab';
+import TournamentTab from './components/TournamentTab';
 import Navbar from './components/Navbar';
 
 // Deep cloning helper
@@ -50,6 +51,76 @@ export default function App() {
 
   // Incomplete matches count for navbar badge
   const [incompleteCount, setIncompleteCount] = useState(0);
+
+  // Ref to avoid pushing state when navigating via popstate (browser back/forward)
+  const isPopNavigating = useRef(false);
+
+  // Central navigation function synchronized with browser history
+  const navigateTo = (newTab, newScreen, replace = false) => {
+    const targetTab = newTab !== undefined ? newTab : activeTab;
+    const targetScreen = newScreen !== undefined ? newScreen : screen;
+
+    if (!isPopNavigating.current) {
+      if (replace) {
+        window.history.replaceState({ tab: targetTab, screen: targetScreen }, '');
+      } else {
+        // Push state only if tab or screen actually changes
+        if (targetTab !== activeTab || targetScreen !== screen) {
+          window.history.pushState({ tab: targetTab, screen: targetScreen }, '');
+        }
+      }
+    }
+
+    if (newTab !== undefined && newTab !== activeTab) {
+      setActiveTab(newTab);
+    }
+    if (newScreen !== undefined && newScreen !== screen) {
+      setScreen(newScreen);
+    }
+  };
+
+  // Listen to browser Back and Forward navigation
+  useEffect(() => {
+    // Establish initial history entry if none exists
+    if (!window.history.state) {
+      window.history.replaceState({ tab: 'scorecard', screen: 'SETUP' }, '');
+    }
+
+    const handlePopState = (e) => {
+      isPopNavigating.current = true;
+      const state = e.state;
+      if (state) {
+        if (state.tab) setActiveTab(state.tab);
+        if (state.screen) setScreen(state.screen);
+      } else {
+        setActiveTab('scorecard');
+        setScreen('SETUP');
+      }
+      setTimeout(() => {
+        isPopNavigating.current = false;
+      }, 50);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Back button handler: tries browser back or falls back to sensible previous screen
+  const handleBackNavigation = () => {
+    if (window.history.length > 1 && window.history.state) {
+      window.history.back();
+    } else {
+      if (activeTab !== 'scorecard') {
+        navigateTo('scorecard', screen);
+      } else if (screen === 'STRIKER_SETUP') {
+        navigateTo('scorecard', 'TOSS');
+      } else if (screen === 'TOSS') {
+        navigateTo('scorecard', 'SETUP');
+      } else {
+        navigateTo('scorecard', 'SETUP');
+      }
+    }
+  };
 
   // Count incomplete matches for badge
   const updateIncompleteCount = () => {
@@ -117,7 +188,7 @@ export default function App() {
     setMatchSettings(settings);
     setCurrentMatchId(Date.now().toString());
     setStumpsStatus(null);
-    setScreen('TOSS');
+    navigateTo('scorecard', 'TOSS');
   };
 
   // 2. Toss completed
@@ -140,7 +211,7 @@ export default function App() {
     
     setInningsList(initialInningsList);
     setCurrentInningsIndex(0);
-    setScreen('STRIKER_SETUP');
+    navigateTo('scorecard', 'STRIKER_SETUP');
   };
 
   // 3. Lineup setup completed
@@ -164,7 +235,7 @@ export default function App() {
       return copy;
     });
 
-    setScreen('GAME');
+    navigateTo('scorecard', 'GAME');
   };
 
   // Swap strike manually
@@ -533,8 +604,7 @@ export default function App() {
 
   // Reset Match State
   const handleResetMatch = () => {
-    setScreen('SETUP');
-    setActiveTab('scorecard');
+    navigateTo('scorecard', 'SETUP');
     setMatchSettings(null);
     setToss(null);
     setInningsList([]);
@@ -559,8 +629,7 @@ export default function App() {
     setBowlerName(match.bowlerName);
     setStumpsStatus(match.stumpsStatus || null);
     setHistory(match.history || []);
-    setScreen(match.screen === 'SUMMARY' ? 'SUMMARY' : (match.screen || 'GAME'));
-    setActiveTab('scorecard');
+    navigateTo('scorecard', match.screen === 'SUMMARY' ? 'SUMMARY' : (match.screen || 'GAME'));
   };
 
   // View Scorecard of a match
@@ -575,91 +644,112 @@ export default function App() {
     setBowlerName(match.bowlerName);
     setStumpsStatus(match.stumpsStatus || null);
     setHistory(match.history || []);
-    setScreen('SUMMARY');
-    setActiveTab('scorecard');
+    navigateTo('scorecard', 'SUMMARY');
+  };
+
+  // Launch a Tournament match into the scorecard
+  const handleStartTournamentMatch = (matchInfo) => {
+    setMatchSettings({
+      team1: matchInfo.team1 || 'Team Assasins',
+      team2: matchInfo.team2 || 'Team Battle',
+      format: matchInfo.format || 'limited',
+      overs: matchInfo.overs || 10,
+      maxInnings: 1,
+    });
+    setCurrentMatchId(Date.now().toString());
+    setStumpsStatus(null);
+    navigateTo('scorecard', 'TOSS');
   };
 
   return (
     <div className="app-container">
-      {/* Main Viewport Content based on active Tab */}
-      {activeTab === 'scorecard' && (
-        <>
-          {screen === 'SETUP' && (
-            <SetupScreen 
-              onSetupComplete={handleSetupComplete} 
-              onViewHistory={() => { setPrevScreen('SETUP'); setActiveTab('history'); }} 
-            />
-          )}
-          
-          {screen === 'TOSS' && (
-            <TossScreen 
-              team1={matchSettings.team1} 
-              team2={matchSettings.team2} 
-              onTossComplete={handleTossComplete} 
-            />
-          )}
-          
-          {screen === 'STRIKER_SETUP' && (
-            <StrikerSetupScreen 
-              battingTeam={inningsList[currentInningsIndex].team} 
-              bowlingTeam={inningsList[currentInningsIndex].bowlingTeam} 
-              onStartGame={handleStartGame} 
-            />
-          )}
-          
-          {screen === 'GAME' && (
-            <GameScreen
-              matchSettings={matchSettings}
-              toss={toss}
-              inningsList={inningsList}
-              currentInningsIndex={currentInningsIndex}
-              strikerName={strikerName}
-              nonStrikerName={nonStrikerName}
-              bowlerName={bowlerName}
-              onBallScored={handleBallScored}
-              onUndo={handleUndo}
-              onDeclare={handleDeclare}
-              onSwapBatsmen={handleSwapBatsmen}
-              onRenamePlayer={handleRenamePlayer}
-              onAllOut={handleAllOut}
-              team1={matchSettings.team1}
-              team2={matchSettings.team2}
-              onDayStumps={handleDayStumps}
-            />
-          )}
-          
-          {screen === 'SUMMARY' && (
-            <SummaryScreen
-              inningsList={inningsList}
-              matchSettings={matchSettings}
-              toss={toss}
-              onResetMatch={handleResetMatch}
-              onGoToHistory={() => setActiveTab('history')}
-            />
-          )}
-        </>
-      )}
+      {/* Scrollable content area: every screen shares exact same width & padding */}
+      <main className="app-content-area">
+        {activeTab === 'scorecard' && (
+          <>
+            {screen === 'SETUP' && (
+              <SetupScreen 
+                onSetupComplete={handleSetupComplete} 
+                onViewHistory={() => { setPrevScreen('SETUP'); navigateTo('history', 'SETUP'); }} 
+              />
+            )}
+            
+            {screen === 'TOSS' && (
+              <TossScreen 
+                team1={matchSettings.team1} 
+                team2={matchSettings.team2} 
+                onTossComplete={handleTossComplete}
+                onBack={handleBackNavigation}
+              />
+            )}
+            
+            {screen === 'STRIKER_SETUP' && (
+              <StrikerSetupScreen 
+                battingTeam={inningsList[currentInningsIndex].team} 
+                bowlingTeam={inningsList[currentInningsIndex].bowlingTeam} 
+                onStartGame={handleStartGame}
+                onBack={handleBackNavigation}
+              />
+            )}
+            
+            {screen === 'GAME' && (
+              <GameScreen
+                matchSettings={matchSettings}
+                toss={toss}
+                inningsList={inningsList}
+                currentInningsIndex={currentInningsIndex}
+                strikerName={strikerName}
+                nonStrikerName={nonStrikerName}
+                bowlerName={bowlerName}
+                onBallScored={handleBallScored}
+                onUndo={handleUndo}
+                onDeclare={handleDeclare}
+                onSwapBatsmen={handleSwapBatsmen}
+                onRenamePlayer={handleRenamePlayer}
+                onAllOut={handleAllOut}
+                team1={matchSettings.team1}
+                team2={matchSettings.team2}
+                onDayStumps={handleDayStumps}
+              />
+            )}
+            
+            {screen === 'SUMMARY' && (
+              <SummaryScreen
+                inningsList={inningsList}
+                matchSettings={matchSettings}
+                toss={toss}
+                onResetMatch={handleResetMatch}
+                onGoToHistory={() => navigateTo('history', 'SUMMARY')}
+              />
+            )}
+          </>
+        )}
 
-      {activeTab === 'players' && (
-        <PlayersTab />
-      )}
+        {activeTab === 'tournament' && (
+          <TournamentTab onStartTournamentMatch={handleStartTournamentMatch} />
+        )}
 
-      {activeTab === 'incomplete' && (
-        <IncompleteMatchesTab onResumeMatch={handleContinueMatch} />
-      )}
+        {activeTab === 'players' && (
+          <PlayersTab />
+        )}
 
-      {activeTab === 'history' && (
-        <HistoryScreen 
-          onContinueMatch={handleContinueMatch}
-          onViewStats={handleViewStats}
-          onBack={() => setActiveTab('scorecard')}
-        />
-      )}
+        {activeTab === 'incomplete' && (
+          <IncompleteMatchesTab onResumeMatch={handleContinueMatch} />
+        )}
 
-      {/* Persistent Bottom Navbar */}
+        {activeTab === 'history' && (
+          <HistoryScreen 
+            onContinueMatch={handleContinueMatch}
+            onViewStats={handleViewStats}
+            onBack={handleBackNavigation}
+          />
+        )}
+      </main>
+
+      {/* Persistent Bottom Navbar: docked directly inside app-container */}
       <Navbar 
         activeTab={activeTab} 
-        onTabChange={(tabId) => setActiveTab(tabId)} 
+        onTabChange={(tabId) => navigateTo(tabId, screen)} 
         incompleteCount={incompleteCount}
       />
     </div>
