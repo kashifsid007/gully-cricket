@@ -4,8 +4,11 @@ import {
   RotateCcw, CheckCircle2, UserCheck, Flame, Info, Sparkles, Award
 } from 'lucide-react';
 import { autoRegisterPlayer } from '../utils/playerDb';
-
-const STORAGE_KEY = 'gully_cricket_tournament_data';
+import {
+  getTournamentData,
+  saveTournamentData,
+  subscribeToTournament,
+} from '../utils/realtimeDb';
 
 const INITIAL_TOURNAMENT_DATA = {
   seriesTitle: "3-MATCH T10 CHAMPIONSHIP SERIES • 2026",
@@ -123,27 +126,21 @@ const INITIAL_TOURNAMENT_DATA = {
 };
 
 export default function TournamentTab({ onStartTournamentMatch }) {
-  const [data, setData] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_TOURNAMENT_DATA;
-    } catch {
-      return INITIAL_TOURNAMENT_DATA;
-    }
-  });
+  const [data, setData] = useState(() => getTournamentData(INITIAL_TOURNAMENT_DATA));
 
   const [syncMessage, setSyncMessage] = useState('');
   const [editingScoreId, setEditingScoreId] = useState(null);
   const [customNote, setCustomNote] = useState('');
 
-  // Persist whenever data changes
+  // Receive tournament changes made on any connected device.
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-      console.error("Failed to persist tournament data", e);
-    }
-  }, [data]);
+    return subscribeToTournament(setData, INITIAL_TOURNAMENT_DATA);
+  }, []);
+
+  const updateData = (updater) => {
+    const next = typeof updater === 'function' ? updater(data) : updater;
+    saveTournamentData(next);
+  };
 
   // Calculate Series Score (e.g. 1-0, 1-1, 2-0)
   const assasinsWins = data.matches.filter(m => m.winner === 'assasins').length;
@@ -180,7 +177,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
 
   // Handle Match Result Change
   const handleSetWinner = (matchId, winnerType) => {
-    setData(prev => {
+    updateData(prev => {
       const updatedMatches = prev.matches.map(match => {
         if (match.id === matchId) {
           const isSame = match.winner === winnerType;
@@ -197,7 +194,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
   };
 
   const handleSaveResultSummary = (matchId) => {
-    setData(prev => {
+    updateData(prev => {
       const updatedMatches = prev.matches.map(match => {
         if (match.id === matchId) {
           return { ...match, resultSummary: customNote };
@@ -212,7 +209,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
 
   const handleResetSeries = () => {
     if (window.confirm("Reset all 3 match results and series score back to 0-0?")) {
-      setData(prev => ({
+      updateData(prev => ({
         ...prev,
         matches: prev.matches.map(m => ({ ...m, winner: null, resultSummary: "" }))
       }));

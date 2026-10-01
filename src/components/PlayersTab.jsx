@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Upload, Camera, Search, UserCheck } from 'lucide-react';
 import { getAllPlayers, savePlayer, getPlayerInitials } from '../utils/playerDb';
+import { subscribeToPlayers } from '../utils/realtimeDb';
 
 export default function PlayersTab() {
   const [players, setPlayers] = useState([]);
@@ -14,7 +15,7 @@ export default function PlayersTab() {
   const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
-    loadPlayers();
+    return subscribeToPlayers(setPlayers);
   }, []);
 
   const loadPlayers = () => {

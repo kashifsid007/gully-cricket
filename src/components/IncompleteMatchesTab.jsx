@@ -1,30 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Calendar, Trash2, Moon, Clock } from 'lucide-react';
+import { deleteMatch, subscribeToMatches } from '../utils/realtimeDb';
 
 export default function IncompleteMatchesTab({ onResumeMatch }) {
   const [incompleteMatches, setIncompleteMatches] = useState([]);
 
   useEffect(() => {
-    loadIncompleteMatches();
+    return subscribeToMatches((matches) => {
+      setIncompleteMatches(
+        matches.filter(m => m.status !== 'Completed' && m.screen !== 'SUMMARY')
+      );
+    });
   }, []);
-
-  const loadIncompleteMatches = () => {
-    try {
-      const matches = JSON.parse(localStorage.getItem('gully_cricket_matches') || '[]');
-      const incomplete = matches.filter(m => m.status !== 'Completed' && m.screen !== 'SUMMARY');
-      setIncompleteMatches(incomplete);
-    } catch (err) {
-      console.error('Error loading matches:', err);
-    }
-  };
 
   const handleDeleteMatch = (matchId, e) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this saved match?')) {
-      const matches = JSON.parse(localStorage.getItem('gully_cricket_matches') || '[]');
-      const updated = matches.filter(m => m.id !== matchId);
-      localStorage.setItem('gully_cricket_matches', JSON.stringify(updated));
-      loadIncompleteMatches();
+      deleteMatch(matchId);
     }
   };
 

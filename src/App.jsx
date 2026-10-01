@@ -9,6 +9,12 @@ import PlayersTab from './components/PlayersTab';
 import IncompleteMatchesTab from './components/IncompleteMatchesTab';
 import TournamentTab from './components/TournamentTab';
 import Navbar from './components/Navbar';
+import {
+  getSyncClientId,
+  subscribeToMatches,
+  subscribeToPlayers,
+  upsertMatch,
+} from './utils/realtimeDb';
 
 // Deep cloning helper
 const cloneState = (stateObj) => JSON.parse(JSON.stringify(stateObj));
@@ -51,9 +57,12 @@ export default function App() {
 
   // Incomplete matches count for navbar badge
   const [incompleteCount, setIncompleteCount] = useState(0);
+  const [, setPlayerDataVersion] = useState(0);
 
   // Ref to avoid pushing state when navigating via popstate (browser back/forward)
   const isPopNavigating = useRef(false);
+  const skipNextAutoSave = useRef(false);
+  const lastRemoteVersion = useRef(0);
 
   // Central navigation function synchronized with browser history
   const navigateTo = (newTab, newScreen, replace = false) => {
@@ -122,30 +131,56 @@ export default function App() {
     }
   };
 
-  // Count incomplete matches for badge
-  const updateIncompleteCount = () => {
-    try {
-      const matches = JSON.parse(localStorage.getItem('gully_cricket_matches') || '[]');
+  // Keep the badge and an open match synchronized with every connected device.
+  useEffect(() => {
+    lastRemoteVersion.current = 0;
+    const unsubscribeMatches = subscribeToMatches((matches) => {
       const count = matches.filter(m => m.status !== 'Completed' && m.screen !== 'SUMMARY').length;
       setIncompleteCount(count);
-    } catch (err) {
-      setIncompleteCount(0);
+
+      if (!currentMatchId) return;
+      const sharedMatch = matches.find((match) => match.id === currentMatchId);
+      if (!sharedMatch || sharedMatch._updatedBy === getSyncClientId()) return;
+
+      const remoteVersion = sharedMatch._updatedAt || 0;
+      if (remoteVersion <= lastRemoteVersion.current) return;
+      lastRemoteVersion.current = remoteVersion;
+      skipNextAutoSave.current = true;
+
+      setMatchSettings(sharedMatch.matchSettings);
+      setToss(sharedMatch.toss);
+      setInningsList(sharedMatch.inningsList || []);
+      setCurrentInningsIndex(sharedMatch.currentInningsIndex || 0);
+      setStrikerName(sharedMatch.strikerName || '');
+      setNonStrikerName(sharedMatch.nonStrikerName || '');
+      setBowlerName(sharedMatch.bowlerName || '');
+      setStumpsStatus(sharedMatch.stumpsStatus || null);
+      setHistory(sharedMatch.history || []);
+      setScreen(sharedMatch.screen || 'GAME');
+    });
+
+    // Start the player listener at app launch so photos and squads are ready
+    // even when the Players tab has not been opened yet.
+    const unsubscribePlayers = subscribeToPlayers(() => {
+      setPlayerDataVersion((version) => version + 1);
+    });
+
+    return () => {
+      unsubscribeMatches();
+      unsubscribePlayers();
+    };
+  }, [currentMatchId]);
+
+  // Auto-save the active match locally and to Firebase.
+  useEffect(() => {
+    if (skipNextAutoSave.current) {
+      skipNextAutoSave.current = false;
+      return;
     }
-  };
 
-  useEffect(() => {
-    updateIncompleteCount();
-  }, [screen, activeTab]);
-
-  // Auto-save game to local storage
-  useEffect(() => {
     if (currentMatchId && screen !== 'SETUP' && screen !== 'HISTORY') {
-      const matches = JSON.parse(localStorage.getItem('gully_cricket_matches') || '[]');
-      const matchIndex = matches.findIndex(m => m.id === currentMatchId);
-
       const matchData = {
         id: currentMatchId,
-        date: matchIndex >= 0 ? matches[matchIndex].date : new Date().toLocaleString(),
         matchSettings,
         toss,
         inningsList,
@@ -158,14 +193,7 @@ export default function App() {
         screen,
         status: screen === 'SUMMARY' ? 'Completed' : (stumpsStatus || 'Incomplete')
       };
-
-      if (matchIndex >= 0) {
-        matches[matchIndex] = matchData;
-      } else {
-        matches.unshift(matchData);
-      }
-      localStorage.setItem('gully_cricket_matches', JSON.stringify(matches));
-      updateIncompleteCount();
+      upsertMatch(matchData);
     }
   }, [currentMatchId, screen, inningsList, currentInningsIndex, strikerName, nonStrikerName, bowlerName, stumpsStatus, history, matchSettings, toss]);
 

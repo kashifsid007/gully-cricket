@@ -2,8 +2,7 @@
 // Provides default tournament squads and retrieves squads for respective teams
 
 import { getAllPlayers } from './playerDb';
-
-const TOURNAMENT_KEY = 'gully_cricket_tournament_data';
+import { getTournamentData } from './realtimeDb';
 
 export const DEFAULT_SQUADS = {
   assasins: {
@@ -49,11 +48,10 @@ export const getTeamSquad = (teamName) => {
     return DEFAULT_SQUADS.battle.players;
   }
 
-  // 3. Check tournament data in localStorage
+  // 3. Check the locally cached copy of shared tournament data
   try {
-    const tourneyRaw = localStorage.getItem(TOURNAMENT_KEY);
-    if (tourneyRaw) {
-      const tourney = JSON.parse(tourneyRaw);
+    const tourney = getTournamentData(null);
+    if (tourney) {
       if (tourney.teams) {
         for (const key of Object.keys(tourney.teams)) {
           const t = tourney.teams[key];

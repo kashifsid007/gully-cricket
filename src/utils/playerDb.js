@@ -1,16 +1,10 @@
-// Helper module for managing player storage and photos in localStorage
+// Helper module for managing player records locally and in the shared database.
 
-const STORAGE_KEY = 'gully_cricket_players';
+import { getPlayers, syncPlayer } from './realtimeDb';
 
 // Get all players from DB
 export const getAllPlayers = () => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch (err) {
-    console.error('Error loading players:', err);
-    return [];
-  }
+  return getPlayers();
 };
 
 // Find player by name (case-insensitive)
@@ -37,9 +31,7 @@ export const autoRegisterPlayer = (name) => {
       highestScore: 0,
       createdAt: new Date().toISOString()
     };
-    const players = getAllPlayers();
-    players.push(player);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
+    syncPlayer(player);
   }
   return player;
 };
@@ -75,8 +67,7 @@ export const savePlayer = (playerData) => {
     players.push(updatedPlayer);
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
-  return updatedPlayer;
+  return syncPlayer(updatedPlayer);
 };
 
 // Update photo specifically for a player by name

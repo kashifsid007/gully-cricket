@@ -1,0 +1,10 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "gully-cricket": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

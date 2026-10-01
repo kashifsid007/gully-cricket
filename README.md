@@ -1,16 +1,36 @@
-# React + Vite
+# Gully Cricket
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A mobile-first React scorecard with shared, live data powered by Firebase Realtime Database.
 
-Currently, two official plugins are available:
+## Real-time database setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The app keeps a local cache so it continues to work offline. When Firebase is configured, match scores, match history, incomplete matches, players/photos, and tournament results are also synchronized to every connected phone.
 
-## React Compiler
+1. Create a project in the [Firebase console](https://console.firebase.google.com/).
+2. Add a Web app to the project and copy its configuration values.
+3. Open **Build → Realtime Database**, create a database, and choose the region closest to your users.
+4. In the Realtime Database **Rules** tab, paste the contents of `database.rules.json` and publish them.
+5. Copy `.env.example` to `.env.local` and replace every placeholder with the Web app values. The `databaseURL` must be copied from the Realtime Database page.
+6. Restart the development server.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```powershell
+Copy-Item .env.example .env.local
+npm.cmd run dev
+```
 
-## Expanding the Oxlint configuration
+If the cloud database is empty, the first configured browser automatically uploads its existing local data. After that, Firebase is the shared source and each phone keeps an up-to-date local cache.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### GitHub Pages
+
+The Firebase Web configuration is included in `.env.production`, so GitHub Pages automatically connects to the shared database on the next deployment.
+
+Firebase Web configuration values identify the project; they are not server credentials. Access is controlled by Realtime Database rules. The included rules allow any visitor to this app to read and update Gully Cricket data, which is appropriate only for a trusted private group. Add Firebase Authentication and stricter rules before publishing the app broadly.
+
+## Development
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+npm.cmd run lint
+npm.cmd run build
+```

@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Play, Eye, ArrowLeft, Calendar, Award } from 'lucide-react';
+import { deleteMatch, subscribeToMatches } from '../utils/realtimeDb';
 
 export default function HistoryScreen({ onContinueMatch, onViewStats, onBack }) {
   const [matches, setMatches] = useState([]);
 
   useEffect(() => {
-    const loadedMatches = JSON.parse(localStorage.getItem('gully_cricket_matches') || '[]');
-    setMatches(loadedMatches);
+    return subscribeToMatches(setMatches);
   }, []);
 
   const handleDelete = (matchId, e) => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this match record?')) return;
     
-    const updated = matches.filter(m => m.id !== matchId);
-    setMatches(updated);
-    localStorage.setItem('gully_cricket_matches', JSON.stringify(updated));
+    deleteMatch(matchId);
   };
 
   const getFormatLabel = (settings) => {
