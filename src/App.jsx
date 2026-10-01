@@ -9,6 +9,7 @@ import PlayersTab from './components/PlayersTab';
 import IncompleteMatchesTab from './components/IncompleteMatchesTab';
 import TournamentTab from './components/TournamentTab';
 import Navbar from './components/Navbar';
+import { Moon, Sun } from 'lucide-react';
 import {
   getSyncClientId,
   subscribeToMatches,
@@ -18,6 +19,17 @@ import {
 
 // Deep cloning helper
 const cloneState = (stateObj) => JSON.parse(JSON.stringify(stateObj));
+
+const THEME_STORAGE_KEY = 'gully-cricket-theme';
+
+const getInitialTheme = () => {
+  if (typeof window === 'undefined') return 'dark';
+
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
 
 const createInnings = (battingTeam, bowlingTeam) => ({
   team: battingTeam,
@@ -35,6 +47,7 @@ const createInnings = (battingTeam, bowlingTeam) => ({
 });
 
 export default function App() {
+  const [theme, setTheme] = useState(getInitialTheme);
   const [activeTab, setActiveTab] = useState('scorecard'); // 'scorecard', 'players', 'incomplete', 'history'
   const [screen, setScreen] = useState('SETUP'); // SETUP, TOSS, STRIKER_SETUP, GAME, SUMMARY, HISTORY
   const [prevScreen, setPrevScreen] = useState('SETUP');
@@ -63,6 +76,15 @@ export default function App() {
   const isPopNavigating = useRef(false);
   const skipNextAutoSave = useRef(false);
   const lastRemoteVersion = useRef(0);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    themeColor?.setAttribute('content', theme === 'dark' ? '#070d30' : '#eef7f3');
+  }, [theme]);
 
   // Central navigation function synchronized with browser history
   const navigateTo = (newTab, newScreen, replace = false) => {
@@ -682,15 +704,50 @@ export default function App() {
       team2: matchInfo.team2 || 'Team Battle',
       format: matchInfo.format || 'limited',
       overs: matchInfo.overs || 10,
-      maxInnings: 1,
+      maxInnings: matchInfo.format === 'test' ? 2 : 1,
+      competitionType: 'tournament',
+      tournamentId: matchInfo.tournamentId,
+      tournamentName: matchInfo.tournamentName,
+      tournamentMatchId: matchInfo.matchNumber,
     });
     setCurrentMatchId(Date.now().toString());
     setStumpsStatus(null);
     navigateTo('scorecard', 'TOSS');
   };
 
+  const chaseTarget = matchSettings?.format === 'limited'
+    && currentInningsIndex === 1
+    && inningsList[0]
+    && inningsList[1]
+    ? {
+        target: inningsList[0].runs + 1,
+        runsNeeded: Math.max(0, inningsList[0].runs + 1 - inningsList[1].runs),
+        ballsRemaining: Math.max(0, (matchSettings.overs * 6) - inningsList[1].balls),
+      }
+    : null;
+
   return (
     <div className="app-container">
+      <header className="app-toolbar">
+        <div className="app-brand-mark" aria-label="Gully Cricket">
+          <span className="app-brand-ball" aria-hidden="true" />
+          <span>Gully Cricket</span>
+        </div>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={() => setTheme((currentTheme) => currentTheme === 'dark' ? 'light' : 'dark')}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          <Sun className="theme-icon theme-icon-sun" size={17} aria-hidden="true" />
+          <span className="theme-toggle-track" aria-hidden="true">
+            <span className="theme-toggle-thumb" />
+          </span>
+          <Moon className="theme-icon theme-icon-moon" size={16} aria-hidden="true" />
+        </button>
+      </header>
+
       {/* Scrollable content area: every screen shares exact same width & padding */}
       <main className="app-content-area">
         {activeTab === 'scorecard' && (
@@ -715,6 +772,7 @@ export default function App() {
               <StrikerSetupScreen 
                 battingTeam={inningsList[currentInningsIndex].team} 
                 bowlingTeam={inningsList[currentInningsIndex].bowlingTeam} 
+                chaseTarget={chaseTarget}
                 onStartGame={handleStartGame}
                 onBack={handleBackNavigation}
               />

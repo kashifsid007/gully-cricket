@@ -22,7 +22,7 @@ If the cloud database is empty, the first configured browser automatically uploa
 
 ### GitHub Pages
 
-The Firebase Web configuration is included in `.env.production`, so GitHub Pages automatically connects to the shared database on the next deployment.
+The non-sensitive Firebase project settings are included in `.env.production`. Add the Firebase browser API key as a GitHub Actions repository secret named `VITE_FIREBASE_API_KEY` before deploying.
 
 Firebase Web configuration values identify the project; they are not server credentials. Access is controlled by Realtime Database rules. The included rules allow any visitor to this app to read and update Gully Cricket data, which is appropriate only for a trusted private group. Add Firebase Authentication and stricter rules before publishing the app broadly.
 

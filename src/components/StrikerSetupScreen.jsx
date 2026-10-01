@@ -3,7 +3,7 @@ import { UserCheck, Shield, ArrowLeft, ArrowRightLeft, Sparkles, Edit2, Check } 
 import { autoRegisterPlayer } from '../utils/playerDb';
 import { getTeamSquad } from '../utils/squadDb';
 
-export default function StrikerSetupScreen({ battingTeam, bowlingTeam, onStartGame, onBack }) {
+export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarget, onStartGame, onBack }) {
   const battingSquad = getTeamSquad(battingTeam);
   const bowlingSquad = getTeamSquad(bowlingTeam);
 
@@ -87,6 +87,19 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, onStartGa
           Tap squad member to select · No typing required
         </p>
       </div>
+
+      {chaseTarget && chaseTarget.runsNeeded > 0 && (
+        <div className="innings-target-card" role="status">
+          <div className="innings-target-label">SECOND INNINGS TARGET</div>
+          <div className="innings-target-score">{chaseTarget.target}</div>
+          <div className="innings-target-message">
+            {battingTeam} need <strong>{chaseTarget.runsNeeded}</strong>{' '}
+            {chaseTarget.runsNeeded === 1 ? 'run' : 'runs'} from{' '}
+            <strong>{chaseTarget.ballsRemaining}</strong>{' '}
+            {chaseTarget.ballsRemaining === 1 ? 'ball' : 'balls'} to win
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '10px' }}>
         {/* ================= BATTING SQUAD SELECTION ================= */}

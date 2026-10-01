@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Upload, Camera, Search, UserCheck } from 'lucide-react';
-import { getAllPlayers, savePlayer, getPlayerInitials } from '../utils/playerDb';
-import { subscribeToPlayers } from '../utils/realtimeDb';
+import { UserPlus, Upload, Camera, Search, UserCheck, Trash2 } from 'lucide-react';
+import { deletePlayer, getAllPlayers, savePlayer, getPlayerInitials } from '../utils/playerDb';
+import { subscribeToMatches, subscribeToPlayers } from '../utils/realtimeDb';
+import { buildPlayerStats, getEmptyPlayerStats } from '../utils/playerStats';
 
 export default function PlayersTab() {
   const [players, setPlayers] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
@@ -15,7 +17,12 @@ export default function PlayersTab() {
   const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
-    return subscribeToPlayers(setPlayers);
+    const unsubscribePlayers = subscribeToPlayers(setPlayers);
+    const unsubscribeMatches = subscribeToMatches(setMatches);
+    return () => {
+      unsubscribePlayers();
+      unsubscribeMatches();
+    };
   }, []);
 
   const loadPlayers = () => {
@@ -96,9 +103,26 @@ export default function PlayersTab() {
     loadPlayers();
   };
 
+  const handleDeletePlayer = (player) => {
+    if (!window.confirm(`Delete ${player.name} from the Player Directory? Match history and tournament squads will be kept.`)) return;
+    deletePlayer(player.id);
+    if (editingPlayer?.id === player.id) {
+      setShowAddModal(false);
+      setEditingPlayer(null);
+    }
+  };
+
   const filteredPlayers = players.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const playerStats = buildPlayerStats(matches);
+  const rankedPlayers = players.map((player) => ({
+    name: player.name,
+    stats: playerStats[player.name.toLowerCase()]?.overall || getEmptyPlayerStats().overall,
+  }));
+  const topRunScorer = [...rankedPlayers].sort((a, b) => b.stats.runs - a.stats.runs)[0];
+  const topWicketTaker = [...rankedPlayers].sort((a, b) => b.stats.wickets - a.stats.wickets)[0];
+  const hasRecordedStats = rankedPlayers.some((player) => player.stats.matches > 0);
 
   return (
     <div className="players-tab-container" style={{ paddingBottom: '70px' }}>
@@ -118,6 +142,21 @@ export default function PlayersTab() {
           <UserPlus size={16} /> Add Player
         </button>
       </div>
+
+      {hasRecordedStats && (
+        <div className="tournament-leader-grid player-leader-grid">
+          <div className="card tournament-leader-card runs">
+            <span>LEADING RUN SCORER</span>
+            <strong>{topRunScorer.name}</strong>
+            <b>{topRunScorer.stats.runs} runs</b>
+          </div>
+          <div className="card tournament-leader-card wickets">
+            <span>LEADING WICKET TAKER</span>
+            <strong>{topWicketTaker.name}</strong>
+            <b>{topWicketTaker.stats.wickets} wickets</b>
+          </div>
+        </div>
+      )}
 
       {/* Search Input */}
       <div className="form-group" style={{ marginBottom: '16px' }}>
@@ -143,8 +182,10 @@ export default function PlayersTab() {
         </div>
       ) : (
         <div className="players-grid">
-          {filteredPlayers.map((player) => (
-            <div key={player.id} className="player-directory-card card">
+          {filteredPlayers.map((player) => {
+            const stats = playerStats[player.name.toLowerCase()] || getEmptyPlayerStats();
+            return (
+            <div key={player.id} className="player-directory-card card player-stats-card">
               <div className="player-avatar-wrapper">
                 {player.photo ? (
                   <img src={player.photo} alt={player.name} className="player-avatar-img" />
@@ -158,22 +199,59 @@ export default function PlayersTab() {
               <div className="player-directory-info">
                 <h3 className="player-directory-name">{player.name}</h3>
                 <div className="player-directory-stats">
-                  <span>Matches: <strong>{player.matches || 0}</strong></span>
-                  <span>Runs: <strong>{player.runs || 0}</strong></span>
-                  <span>Wkts: <strong>{player.wickets || 0}</strong></span>
+                  <span>Matches: <strong>{stats.overall.matches}</strong></span>
+                  <span>Runs: <strong>{stats.overall.runs}</strong></span>
+                  <span>Wkts: <strong>{stats.overall.wickets}</strong></span>
                 </div>
               </div>
 
-              <button 
-                className="edit-name-btn"
-                onClick={() => handleOpenAddModal(player)}
-                title="Edit Player Photo / Name"
-                style={{ padding: '8px' }}
-              >
-                <Camera size={16} />
-              </button>
+              <div className="player-card-actions">
+                <button
+                  className="edit-name-btn"
+                  onClick={() => handleOpenAddModal(player)}
+                  title="Edit Player Photo / Name"
+                  style={{ padding: '8px' }}
+                >
+                  <Camera size={16} />
+                </button>
+                <button
+                  className="edit-name-btn player-delete-btn"
+                  onClick={() => handleDeletePlayer(player)}
+                  title={`Delete ${player.name}`}
+                  style={{ padding: '8px' }}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              <div className="format-stats-grid">
+                {[
+                  ['Limited', stats.limited],
+                  ['Test', stats.test],
+                  ['Tournament', stats.tournament],
+                ].map(([label, values]) => (
+                  <div key={label} className="format-stat-box">
+                    <strong>{label}</strong>
+                    <span>{values.matches} M</span>
+                    <span>{values.runs} R</span>
+                    <span>{values.wickets} W</span>
+                    <span>HS {values.highestScore}</span>
+                  </div>
+                ))}
+              </div>
+
+              {Object.entries(stats.tournaments).length > 0 && (
+                <div className="tournament-stat-list">
+                  {Object.entries(stats.tournaments).map(([id, values]) => (
+                    <div key={id}>
+                      <strong>{values.name}</strong>
+                      <span>{values.matches} matches · {values.runs} runs · {values.wickets} wickets</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+          )})}
         </div>
       )}
 

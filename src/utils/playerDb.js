@@ -1,6 +1,6 @@
 // Helper module for managing player records locally and in the shared database.
 
-import { getPlayers, syncPlayer } from './realtimeDb';
+import { deletePlayerRecord, getPlayers, syncPlayer } from './realtimeDb';
 
 // Get all players from DB
 export const getAllPlayers = () => {
@@ -77,6 +77,11 @@ export const updatePlayerPhoto = (name, base64Photo) => {
     return savePlayer({ ...player, photo: base64Photo });
   }
   return null;
+};
+
+export const deletePlayer = (playerId) => {
+  if (!playerId) return;
+  deletePlayerRecord(playerId);
 };
 
 // Get initials helper

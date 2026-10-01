@@ -218,6 +218,17 @@ export const syncPlayer = (player) => {
   return player;
 };
 
+export const deletePlayerRecord = (playerId) => {
+  const nextPlayers = getPlayers().filter((player) => player.id !== playerId);
+  cacheAndNotify('players', nextPlayers);
+
+  if (database) {
+    void remove(ref(database, `${ROOT_PATH}/players/${playerId}`)).catch((error) => {
+      console.error(`Could not delete player ${playerId} from Firebase.`, error);
+    });
+  }
+};
+
 export const getTournamentData = (fallback) => readLocal('tournament', fallback);
 export const subscribeToTournament = (listener, fallback) =>
   subscribe('tournament', listener, fallback);

@@ -4,7 +4,14 @@
 :root {
   --bg-color: #496b43;
   --bg-gradient: linear-gradient(135deg, #3b5936 0%, #588252 50%, #344f2f 100%);
+  --app-bg: linear-gradient(180deg, #070d30 0%, #0d1646 50%, #060c2b 100%);
   --card-bg: linear-gradient(135deg, rgba(12, 20, 75, 0.92) 0%, rgba(6, 12, 50, 0.92) 100%);
+  --toolbar-bg: rgba(7, 13, 48, 0.96);
+  --nav-bg: rgba(8, 14, 45, 0.98);
+  --field-bg: rgba(10, 18, 65, 0.9);
+  --soft-surface: rgba(255, 255, 255, 0.05);
+  --surface-solid: #111827;
+  --divider: rgba(255, 255, 255, 0.1);
   --card-border: rgba(0, 229, 255, 0.4);
   --primary: #00e5ff;
   --primary-glow: rgba(0, 229, 255, 0.4);
@@ -29,6 +36,35 @@
   --radius-sm: 10px;
   --radius-md: 18px;
   --radius-lg: 26px;
+}
+
+:root[data-theme="light"] {
+  --bg-color: #dfe7eb;
+  --bg-gradient: linear-gradient(135deg, #d7e1e6 0%, #eef3f5 50%, #cbd8de 100%);
+  --app-bg: linear-gradient(180deg, #f8fafc 0%, #eef3f6 55%, #f7f9fa 100%);
+  --card-bg: linear-gradient(145deg, #ffffff 0%, #f7fafb 100%);
+  --toolbar-bg: rgba(248, 251, 255, 0.96);
+  --nav-bg: rgba(255, 255, 255, 0.97);
+  --field-bg: rgba(255, 255, 255, 0.96);
+  --soft-surface: rgba(22, 74, 91, 0.06);
+  --surface-solid: #ffffff;
+  --divider: rgba(15, 54, 67, 0.12);
+  --card-border: rgba(46, 93, 110, 0.22);
+  --primary: #08798a;
+  --primary-glow: rgba(8, 121, 138, 0.18);
+  --secondary: #147a5a;
+  --secondary-glow: rgba(8, 126, 91, 0.2);
+  --accent: #c51643;
+  --text-primary: #173042;
+  --text-secondary: #456477;
+  --text-muted: #6a8491;
+  --success: #087e5b;
+  --error: #d31946;
+  --warning: #8a6a00;
+  --overlay-bg: rgba(226, 239, 236, 0.88);
+  --shadow-sm: 0 2px 8px rgba(20, 58, 69, 0.1);
+  --shadow-md: 0 8px 24px rgba(20, 58, 69, 0.14);
+  --shadow-lg: 0 16px 40px rgba(20, 58, 69, 0.2);
 }
 
 * {
@@ -60,7 +96,7 @@ body {
   height: 100vh;
   height: 100dvh;
   margin: 0 auto;
-  background: linear-gradient(180deg, #070d30 0%, #0d1646 50%, #060c2b 100%);
+  background: var(--app-bg);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -69,6 +105,102 @@ body {
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 229, 255, 0.2);
   border-left: 1.5px solid rgba(0, 229, 255, 0.35);
   border-right: 1.5px solid rgba(0, 229, 255, 0.35);
+}
+
+.app-toolbar {
+  position: relative;
+  z-index: 90;
+  flex-shrink: 0;
+  min-height: 48px;
+  padding: 8px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-primary);
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.app-brand-ball {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f43f5e, #be123c);
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+  position: relative;
+}
+
+.app-brand-ball::after {
+  content: '';
+  position: absolute;
+  inset: 3px 8px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.85);
+  transform: rotate(-28deg);
+}
+
+.theme-toggle {
+  min-width: 82px;
+  height: 32px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--soft-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+  background: rgba(0, 229, 255, 0.1);
+}
+
+.theme-toggle:active {
+  transform: scale(0.96);
+}
+
+.theme-toggle-track {
+  width: 28px;
+  height: 16px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.3);
+}
+
+.theme-toggle-thumb {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: translateX(12px);
+  transition: transform 0.24s ease, background 0.24s ease;
+}
+
+:root[data-theme="light"] .theme-toggle-thumb {
+  transform: translateX(0);
+  background: #e29b00;
+}
+
+:root[data-theme="light"] .theme-icon-sun,
+:root[data-theme="dark"] .theme-icon-moon {
+  color: var(--warning);
 }
 
 /* Scrollable main content area: all screens live here with identical width */
@@ -86,7 +218,7 @@ body {
 
 @media (max-width: 480px) {
   body {
-    background: #070d30;
+    background: var(--app-bg);
     padding: 0;
     margin: 0;
   }
@@ -146,7 +278,7 @@ h1, h2, h3, h4 {
 
 /* Utility Card Styling - TV Broadcast Glassmorphism */
 .card {
-  background: linear-gradient(135deg, rgba(14, 25, 95, 0.9) 0%, rgba(8, 16, 68, 0.9) 100%);
+  background: var(--card-bg);
   backdrop-filter: blur(20px);
   border: 1.5px solid rgba(0, 229, 255, 0.35);
   border-radius: var(--radius-md);
@@ -175,11 +307,11 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
 }
 .form-input {
-  background: rgba(10, 18, 65, 0.9);
+  background: var(--field-bg);
   border: 1.5px solid rgba(0, 229, 255, 0.35);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 1rem;
   transition: all 0.3s;
@@ -191,7 +323,7 @@ h1, h2, h3, h4 {
   background: rgba(15, 26, 90, 0.95);
 }
 .form-select {
-  background: rgba(10, 18, 65, 0.95);
+  background: var(--field-bg);
   border: 1.5px solid rgba(0, 229, 255, 0.35);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
@@ -604,7 +736,7 @@ h1, h2, h3, h4 {
   padding: 24px;
 }
 .modal {
-  background: #111827;
+  background: var(--surface-solid);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   padding: 24px;
@@ -1178,15 +1310,57 @@ h1, h2, h3, h4 {
 
 /* Target Chasing Bar */
 .broadcast-target-bar {
-  background: rgba(0, 229, 255, 0.12);
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: linear-gradient(135deg, rgba(255, 234, 0, 0.2), rgba(0, 229, 255, 0.18));
+  border: 1px solid rgba(255, 234, 0, 0.65);
   border-top: none;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
-  padding: 8px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #00e5ff;
+  padding: 10px 12px;
+  color: #ffffff;
   text-align: center;
+}
+
+.broadcast-target-heading {
+  color: #ffea00;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.broadcast-target-message {
+  margin-top: 2px;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.innings-target-card {
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 234, 0, 0.7);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(255, 234, 0, 0.18), rgba(0, 229, 255, 0.13));
+  box-shadow: 0 8px 24px rgba(255, 234, 0, 0.12);
+  text-align: center;
+}
+
+.innings-target-label {
+  color: #ffea00;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.innings-target-score {
+  margin: 2px 0;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.innings-target-message {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 /* Test Innings Breakdown Pills */
@@ -1277,7 +1451,7 @@ h1, h2, h3, h4 {
 /* PLAYERS DIRECTORY TAB GRID */
 .players-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
 
@@ -1311,12 +1485,358 @@ h1, h2, h3, h4 {
   margin-top: 2px;
 }
 
+.player-stats-card {
+  flex-wrap: wrap;
+}
+
+.player-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-delete-btn {
+  color: var(--error) !important;
+}
+
+.player-delete-btn:hover {
+  border-color: var(--error) !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+}
+
+.format-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+.format-stat-box {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px 5px;
+  padding: 8px;
+  border: 1px solid rgba(0, 229, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 229, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.format-stat-box strong {
+  grid-column: 1 / -1;
+  color: var(--secondary);
+  font-size: 0.73rem;
+}
+
+.tournament-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tournament-stat-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.tournament-stat-list strong {
+  color: #ffea00;
+}
+
+.tournament-manager-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  overflow: visible;
+}
+
+.tournament-manager-bar > div {
+  width: 100%;
+  min-width: 0;
+}
+
+.tournament-manager-bar .form-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tournament-manager-bar .btn {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tournament-selector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.tournament-selector-heading .form-label {
+  margin: 0;
+}
+
+.sync-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.sync-status-pill > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sync-status-pill.online {
+  background: rgba(0, 255, 136, 0.12);
+  color: #00ff88;
+}
+
+.sync-status-pill.online > span {
+  box-shadow: 0 0 8px #00ff88;
+  animation: pulse-cyan 1.8s infinite;
+}
+
+.tournament-section-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(6, 12, 43, 0.94);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.tournament-section-tabs button {
+  min-width: 0;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.tournament-section-tabs button.active {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.24), rgba(0, 255, 136, 0.14));
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.4);
+}
+
+.compact-tournament-header {
+  padding: 12px;
+}
+
+.compact-tournament-header .series-pill-badge {
+  margin-bottom: 5px;
+}
+
+.compact-tournament-header .tournament-main-title {
+  font-size: 1.15rem;
+}
+
+.compact-tournament-header .tournament-sub-header {
+  display: none;
+}
+
+.compact-tournament-header .tournament-caption {
+  margin-top: 2px;
+}
+
+.compact-tournament-header .series-scoreboard-card {
+  margin-top: 8px;
+  padding: 10px;
+}
+
+.compact-tournament-header .series-team-box {
+  padding: 7px 5px;
+}
+
+.tournament-leader-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.player-leader-grid {
+  margin-bottom: 14px;
+}
+
+.tournament-leader-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.tournament-leader-card span {
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.tournament-leader-card strong {
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.tournament-leader-card b {
+  color: #ffea00;
+  font-size: 1.2rem;
+}
+
+.tournament-leader-card.wickets b {
+  color: #fb7185;
+}
+
+.tournament-stats-table-wrap {
+  margin-top: 10px;
+  padding: 5px;
+  overflow-x: auto;
+}
+
+.tournament-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.tournament-stats-table th,
+.tournament-stats-table td {
+  padding: 9px 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: center;
+}
+
+.tournament-stats-table th:first-child,
+.tournament-stats-table td:first-child {
+  text-align: left;
+}
+
+.tournament-stats-table th {
+  color: var(--secondary);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.tournament-stats-empty {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.tournament-fab {
+  position: fixed;
+  /* Keep the action inside the 480px app shell instead of the browser edge. */
+  right: calc(max(0px, (100vw - 480px) / 2) + 14px);
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00e5ff, #00c878);
+  color: #031128;
+  box-shadow: 0 10px 28px rgba(0, 229, 255, 0.42);
+  cursor: pointer;
+}
+
+.tournament-fab:active {
+  transform: scale(0.94);
+}
+
+.tournament-create-modal {
+  width: min(94vw, 620px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.tournament-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.tournament-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tournament-form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.tournament-team-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.tournament-team-form h4 {
+  color: var(--secondary);
+  margin: 0;
+}
+
+.tournament-team-form textarea {
+  resize: vertical;
+  min-height: 82px;
+}
+
+@media (max-width: 520px) {
+  .format-stats-grid,
+  .tournament-form-row {
+    grid-template-columns: 1fr;
+  }
+
+}
+
 /* PERSISTENT BOTTOM NAVIGATION BAR */
 .bottom-navbar {
   flex-shrink: 0;
   width: 100%;
   height: 60px;
-  background: rgba(8, 14, 45, 0.98);
+  background: var(--nav-bg);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
   border-top: 1.5px solid rgba(0, 229, 255, 0.35);
@@ -2620,6 +3140,251 @@ h1, h2, h3, h4 {
 .history-screen-container {
   width: 100%;
   box-sizing: border-box;
+}
+
+/* LIGHT THEME ------------------------------------------------------------ */
+:root[data-theme="light"] .app-container {
+  border-color: rgba(46, 93, 110, 0.2);
+  box-shadow: 0 18px 48px rgba(31, 55, 67, 0.18);
+}
+
+:root[data-theme="light"] .app-toolbar,
+:root[data-theme="light"] .bottom-navbar {
+  border-color: rgba(0, 127, 145, 0.22);
+  box-shadow: 0 5px 18px rgba(31, 69, 78, 0.08);
+}
+
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .history-card {
+  box-shadow: 0 8px 22px rgba(31, 55, 67, 0.1);
+}
+
+:root[data-theme="light"] .card:hover,
+:root[data-theme="light"] .history-card:hover {
+  border-color: rgba(0, 127, 145, 0.45);
+  box-shadow: 0 10px 28px rgba(20, 58, 69, 0.16);
+}
+
+:root[data-theme="light"] .form-input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 127, 145, 0.13);
+}
+
+:root[data-theme="light"] .btn-primary {
+  background: linear-gradient(135deg, #08798a 0%, #2563a6 100%);
+  box-shadow: 0 5px 14px rgba(20, 91, 128, 0.2);
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .btn-primary:hover {
+  background: linear-gradient(135deg, #096f7d 0%, #1e568f 100%);
+  box-shadow: 0 7px 18px rgba(20, 91, 128, 0.24);
+}
+
+:root[data-theme="light"] .btn-secondary,
+:root[data-theme="light"] .format-card,
+:root[data-theme="light"] .keypad-btn,
+:root[data-theme="light"] .dismissal-btn,
+:root[data-theme="light"] .squad-chip,
+:root[data-theme="light"] .btn-winner-pick,
+:root[data-theme="light"] .mini-select {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(0, 127, 145, 0.25);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .btn-secondary:hover,
+:root[data-theme="light"] .format-card.selected {
+  background: linear-gradient(135deg, rgba(0, 166, 184, 0.12), rgba(255, 255, 255, 0.98));
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .innings-history,
+:root[data-theme="light"] .player-card,
+:root[data-theme="light"] .over-balls-container,
+:root[data-theme="light"] .tabs-header,
+:root[data-theme="light"] .extras-row,
+:root[data-theme="light"] .toss-info-block,
+:root[data-theme="light"] .history-card-scores,
+:root[data-theme="light"] .format-stat-box,
+:root[data-theme="light"] .fixture-info-grid,
+:root[data-theme="light"] .squad-player-row {
+  background: rgba(20, 85, 98, 0.055);
+  border-color: rgba(0, 127, 145, 0.18);
+}
+
+:root[data-theme="light"] .scorecard-table td,
+:root[data-theme="light"] .tournament-stats-table th,
+:root[data-theme="light"] .tournament-stats-table td,
+:root[data-theme="light"] .squad-header,
+:root[data-theme="light"] .lineup-card-header,
+:root[data-theme="light"] .match-action-section {
+  border-color: var(--divider);
+}
+
+:root[data-theme="light"] .tournament-section-tabs {
+  background: #ffffff !important;
+  border-color: #d2e0e5 !important;
+  box-shadow: 0 6px 16px rgba(31, 55, 67, 0.09) !important;
+}
+
+:root[data-theme="light"] .tournament-section-tabs button {
+  color: #607b88;
+}
+
+:root[data-theme="light"] .tournament-section-tabs button.active {
+  background: linear-gradient(135deg, #0c7687, #11677d) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(8, 121, 138, 0.2) !important;
+}
+
+:root[data-theme="light"] .tournament-header-banner,
+:root[data-theme="light"] .squad-card,
+:root[data-theme="light"] .fixture-match-card,
+:root[data-theme="light"] .lineup-team-card,
+:root[data-theme="light"] .rule-card,
+:root[data-theme="light"] .series-scoreboard-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f3f7f9 100%) !important;
+  border-color: #d2e0e5 !important;
+  box-shadow: 0 6px 18px rgba(31, 55, 67, 0.09) !important;
+}
+
+:root[data-theme="light"] .tournament-header-banner {
+  background: linear-gradient(145deg, #ffffff 0%, #f3f8fa 100%) !important;
+  border-color: #c8dce3 !important;
+}
+
+:root[data-theme="light"] .tournament-header-banner::before {
+  background: radial-gradient(circle, rgba(8, 121, 138, 0.07) 0%, transparent 62%);
+}
+
+:root[data-theme="light"] .series-team-box {
+  background: #ffffff;
+  border-color: #d7e3e7;
+}
+
+:root[data-theme="light"] .series-team-box.leading {
+  background: rgba(235, 183, 0, 0.1);
+  border-color: #b98b00;
+}
+
+:root[data-theme="light"] .timing-notice-card {
+  background: linear-gradient(135deg, #fffbea, #fff6cc);
+  border-color: rgba(138, 106, 0, 0.35);
+  box-shadow: 0 4px 18px rgba(85, 66, 0, 0.1);
+}
+
+:root[data-theme="light"] .notice-title,
+:root[data-theme="light"] .notice-desc,
+:root[data-theme="light"] .notice-desc strong,
+:root[data-theme="light"] .series-header-text,
+:root[data-theme="light"] .vs-sign,
+:root[data-theme="light"] .match-number-badge {
+  color: #745900;
+}
+
+:root[data-theme="light"] .series-pill-badge {
+  color: #08798a;
+  background: #e8f5f6;
+  border-color: #a8d5db;
+}
+
+:root[data-theme="light"] .series-pill-badge svg,
+:root[data-theme="light"] .series-header-bar svg {
+  stroke: currentColor;
+}
+
+:root[data-theme="light"] .series-header-bar {
+  color: #765c00;
+}
+
+:root[data-theme="light"] .tournament-caption,
+:root[data-theme="light"] .team-captain-sub {
+  color: #5d7886;
+}
+
+:root[data-theme="light"] .series-status-pill {
+  background: #eaf7f3;
+  border-color: #abdccc;
+}
+
+:root[data-theme="light"] .pulse-indicator {
+  background: #11865f;
+  box-shadow: 0 0 7px rgba(17, 134, 95, 0.45);
+}
+
+:root[data-theme="light"] .tournament-main-title {
+  background: linear-gradient(135deg, #173f56 0%, #007f91 55%, #087e5b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+:root[data-theme="light"] .section-title,
+:root[data-theme="light"] .status-text,
+:root[data-theme="light"] .player-name-text,
+:root[data-theme="light"] .fixture-main-title,
+:root[data-theme="light"] .info-chip strong,
+:root[data-theme="light"] .rule-title,
+:root[data-theme="light"] .tournament-leader-card strong,
+:root[data-theme="light"] .innings-target-score {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .series-big-score,
+:root[data-theme="light"] .series-team-box.assasins .series-big-score {
+  color: var(--primary);
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .series-team-box.battle .series-big-score {
+  color: #c9234f;
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .assasins-header .squad-team-name,
+:root[data-theme="light"] .sync-btn,
+:root[data-theme="light"] .btn-launch-match,
+:root[data-theme="light"] .rule-badge-num,
+:root[data-theme="light"] .team-flag-pill.assasins,
+:root[data-theme="light"] .match-outcome-badge.assasins,
+:root[data-theme="light"] .batting-tag,
+:root[data-theme="light"] .chip-avatar {
+  color: var(--primary);
+}
+
+:root[data-theme="light"] .battle-header .squad-team-name,
+:root[data-theme="light"] .team-flag-pill.battle,
+:root[data-theme="light"] .match-outcome-badge.battle,
+:root[data-theme="light"] .bowling-tag,
+:root[data-theme="light"] .bowler-avatar {
+  color: var(--accent);
+}
+
+:root[data-theme="light"] .dash-sign {
+  color: rgba(16, 42, 56, 0.28);
+}
+
+:root[data-theme="light"] .tournament-fab {
+  background: linear-gradient(135deg, #08798a, #0f9b78);
+  color: #ffffff;
+  border-color: rgba(0, 99, 112, 0.25);
+  box-shadow: 0 8px 20px rgba(8, 121, 138, 0.24);
+}
+
+:root[data-theme="light"] .sync-status-pill.online {
+  background: #e7f7f0;
+  color: #117752;
+}
+
+:root[data-theme="light"] .sync-status-pill.online > span {
+  box-shadow: 0 0 6px rgba(17, 119, 82, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-thumb {
+    transition: none;
+  }
 }
 
 

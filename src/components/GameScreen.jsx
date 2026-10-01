@@ -90,8 +90,8 @@ export default function GameScreen({
   if (isLimited && currentInningsIndex === 1) {
     const firstInnings = inningsList[0];
     target = firstInnings.runs + 1;
-    runsNeeded = target - totalRuns;
-    ballsRemaining = (matchSettings.overs * 6) - totalBalls;
+    runsNeeded = Math.max(0, target - totalRuns);
+    ballsRemaining = Math.max(0, (matchSettings.overs * 6) - totalBalls);
     reqRunRate = ballsRemaining > 0 ? ((runsNeeded / ballsRemaining) * 6).toFixed(2) : '0.00';
   } else if (isTest && currentInningsIndex === 3) {
     const battingTeam = currentInnings.team;
@@ -257,7 +257,13 @@ export default function GameScreen({
         isTest={isTest}
         inningsIndex={currentInningsIndex}
         stumpsStatus={stumpsStatus}
-        targetInfo={runsNeeded > 0 ? { runsNeeded, ballsRemaining, reqRunRate } : null}
+        targetInfo={runsNeeded > 0 ? {
+          target,
+          teamName: currentInnings.team,
+          runsNeeded,
+          ballsRemaining,
+          reqRunRate,
+        } : null}
         inningsList={inningsList}
       />
 

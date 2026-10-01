@@ -13,6 +13,7 @@ export default function BroadcastScorecard({
 }) {
   const oversStr = `${Math.floor(balls / 6)}.${balls % 6}`;
   const runRate = balls > 0 ? ((runs / balls) * 6).toFixed(2) : '0.00';
+  const hasBallLimit = Number.isFinite(targetInfo?.ballsRemaining);
 
   // Get short 3-4 letter team code (e.g. India -> IND, Kashif XI -> KASH)
   const getTeamCode = (name) => {
@@ -69,8 +70,21 @@ export default function BroadcastScorecard({
 
       {/* Target Chasing Bar (if applicable) */}
       {targetInfo && targetInfo.runsNeeded > 0 && (
-        <div className="broadcast-target-bar">
-          🎯 {targetInfo.runsNeeded} runs needed {targetInfo.ballsRemaining ? `from ${targetInfo.ballsRemaining} balls (Req RR: ${targetInfo.reqRunRate})` : 'to win'}
+        <div className="broadcast-target-bar" role="status">
+          <div className="broadcast-target-heading">
+            🎯 TARGET: {targetInfo.target}
+          </div>
+          <div className="broadcast-target-message">
+            {targetInfo.teamName} need <strong>{targetInfo.runsNeeded}</strong>{' '}
+            {targetInfo.runsNeeded === 1 ? 'run' : 'runs'}{' '}
+            {hasBallLimit ? (
+              <>
+                from <strong>{targetInfo.ballsRemaining}</strong>{' '}
+                {targetInfo.ballsRemaining === 1 ? 'ball' : 'balls'} to win
+                {targetInfo.ballsRemaining > 0 && ` • Required RR: ${targetInfo.reqRunRate}`}
+              </>
+            ) : 'to win'}
+          </div>
         </div>
       )}
 

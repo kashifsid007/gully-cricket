@@ -38,21 +38,16 @@ export const getTeamSquad = (teamName) => {
   if (!teamName) return [];
   const normalized = teamName.trim().toLowerCase();
 
-  // 1. Match Team Assasins
-  if (normalized.includes('assasin')) {
-    return DEFAULT_SQUADS.assasins.players;
-  }
-
-  // 2. Match Team Battle
-  if (normalized.includes('battle')) {
-    return DEFAULT_SQUADS.battle.players;
-  }
-
-  // 3. Check the locally cached copy of shared tournament data
+  // 1. Prefer squads from the currently selected tournament.
   try {
-    const tourney = getTournamentData(null);
-    if (tourney) {
-      if (tourney.teams) {
+    const savedTournamentData = getTournamentData(null);
+    if (savedTournamentData) {
+      const tourney = Array.isArray(savedTournamentData.tournaments)
+        ? savedTournamentData.tournaments.find(
+            (item) => item.id === savedTournamentData.activeTournamentId
+          ) || savedTournamentData.tournaments[0]
+        : savedTournamentData;
+      if (tourney?.teams) {
         for (const key of Object.keys(tourney.teams)) {
           const t = tourney.teams[key];
           if (t && t.name && (t.name.toLowerCase() === normalized || normalized.includes(t.name.toLowerCase()) || t.name.toLowerCase().includes(normalized))) {
@@ -71,7 +66,16 @@ export const getTeamSquad = (teamName) => {
     console.error('Error reading tournament squads:', err);
   }
 
-  // 4. Fallback to registered players from Player DB
+  // 2. Legacy tournament fallbacks.
+  if (normalized.includes('assasin')) {
+    return DEFAULT_SQUADS.assasins.players;
+  }
+
+  if (normalized.includes('battle')) {
+    return DEFAULT_SQUADS.battle.players;
+  }
+
+  // 3. Fallback to registered players from Player DB
   const allDbPlayers = getAllPlayers();
   if (allDbPlayers && allDbPlayers.length > 0) {
     // Return registered players if available
@@ -82,7 +86,7 @@ export const getTeamSquad = (teamName) => {
     }));
   }
 
-  // 5. Default generic squad if nothing exists yet
+  // 4. Default generic squad if nothing exists yet
   return [
     { name: `${teamName} Batter 1`, isCaptain: true, role: 'Captain' },
     { name: `${teamName} Batter 2`, isCaptain: false, role: 'Batsman' },

@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Trophy, Calendar, Clock, Shield, AlertTriangle, Play, 
-  RotateCcw, CheckCircle2, UserCheck, Flame, Info, Sparkles, Award
+  RotateCcw, CheckCircle2, UserCheck, Sparkles, Award, Plus, X, BarChart3
 } from 'lucide-react';
 import { autoRegisterPlayer } from '../utils/playerDb';
 import {
   getTournamentData,
+  isRealtimeEnabled,
   saveTournamentData,
+  subscribeToMatches,
   subscribeToTournament,
 } from '../utils/realtimeDb';
+import { buildPlayerStats, getEmptyPlayerStats } from '../utils/playerStats';
 
 const INITIAL_TOURNAMENT_DATA = {
+  id: 't10-championship-2026',
+  format: 'limited',
+  overs: 10,
   seriesTitle: "3-MATCH T10 CHAMPIONSHIP SERIES • 2026",
   subTitle: "T10 CRICKET TOURNAMENT FIXTURE & RULES",
   docInfo: "Official Schedule, Playing Squads & Ground Regulations",
@@ -125,48 +131,182 @@ const INITIAL_TOURNAMENT_DATA = {
   ]
 };
 
+const normalizeTournamentStore = (saved) => {
+  if (Array.isArray(saved?.tournaments) && saved.tournaments.length > 0) {
+    return saved;
+  }
+
+  const legacyTournament = {
+    ...INITIAL_TOURNAMENT_DATA,
+    ...(saved || {}),
+    id: saved?.id || INITIAL_TOURNAMENT_DATA.id,
+    format: saved?.format || 'limited',
+    overs: saved?.overs || 10,
+  };
+
+  return {
+    activeTournamentId: legacyTournament.id,
+    tournaments: [legacyTournament],
+  };
+};
+
+const parseSquad = (value) => value
+  .split(/[\n,]+/)
+  .map((name) => name.trim())
+  .filter(Boolean)
+  .map((name, index) => ({ name, isCaptain: index === 0 }));
+
 export default function TournamentTab({ onStartTournamentMatch }) {
-  const [data, setData] = useState(() => getTournamentData(INITIAL_TOURNAMENT_DATA));
+  const [store, setStore] = useState(() =>
+    normalizeTournamentStore(getTournamentData(INITIAL_TOURNAMENT_DATA))
+  );
 
   const [syncMessage, setSyncMessage] = useState('');
+  const [activeSection, setActiveSection] = useState('overview');
+  const [appMatches, setAppMatches] = useState([]);
   const [editingScoreId, setEditingScoreId] = useState(null);
   const [customNote, setCustomNote] = useState('');
+  const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [newTournament, setNewTournament] = useState({
+    name: '',
+    format: 'limited',
+    overs: 10,
+    matchCount: 3,
+    team1Name: '',
+    team1Squad: '',
+    team2Name: '',
+    team2Squad: '',
+  });
+
+  const data = store.tournaments.find(
+    (tournament) => tournament.id === store.activeTournamentId
+  ) || store.tournaments[0];
 
   // Receive tournament changes made on any connected device.
   useEffect(() => {
-    return subscribeToTournament(setData, INITIAL_TOURNAMENT_DATA);
+    const unsubscribeTournament = subscribeToTournament(
+      (saved) => setStore(normalizeTournamentStore(saved)),
+      INITIAL_TOURNAMENT_DATA
+    );
+    const unsubscribeMatches = subscribeToMatches(setAppMatches);
+    return () => {
+      unsubscribeTournament();
+      unsubscribeMatches();
+    };
   }, []);
 
   const updateData = (updater) => {
     const next = typeof updater === 'function' ? updater(data) : updater;
-    saveTournamentData(next);
+    const nextStore = {
+      ...store,
+      tournaments: store.tournaments.map((tournament) =>
+        tournament.id === data.id ? next : tournament
+      ),
+    };
+    saveTournamentData(nextStore);
+  };
+
+  const handleCreateTournament = (event) => {
+    event.preventDefault();
+    const team1Squad = parseSquad(newTournament.team1Squad);
+    const team2Squad = parseSquad(newTournament.team2Squad);
+    if (!newTournament.name.trim() || !newTournament.team1Name.trim() || !newTournament.team2Name.trim()) return;
+    if (team1Squad.length < 2 || team2Squad.length < 2) {
+      window.alert('Please add at least two players to each squad. The first player will be captain.');
+      return;
+    }
+
+    const id = `tournament_${Date.now()}`;
+    const isTest = newTournament.format === 'test';
+    const matchCount = Math.max(1, Number(newTournament.matchCount) || 1);
+    const tournament = {
+      id,
+      seriesTitle: newTournament.name.trim(),
+      subTitle: isTest ? 'TEST CRICKET TOURNAMENT' : `${newTournament.overs}-OVER CRICKET TOURNAMENT`,
+      docInfo: 'Playing squads, fixtures and live series standings',
+      format: newTournament.format,
+      overs: isTest ? null : Math.max(1, Number(newTournament.overs) || 1),
+      teams: {
+        team1: {
+          name: newTournament.team1Name.trim(),
+          captain: team1Squad[0].name,
+          squad: team1Squad,
+        },
+        team2: {
+          name: newTournament.team2Name.trim(),
+          captain: team2Squad[0].name,
+          squad: team2Squad,
+        },
+      },
+      matches: Array.from({ length: matchCount }, (_, index) => ({
+        id: `${id}_match_${index + 1}`,
+        name: `Match ${index + 1}`,
+        fixture: `${newTournament.team1Name.trim()} vs ${newTournament.team2Name.trim()}`,
+        dateDay: 'To be scheduled',
+        format: isTest ? 'Test Match' : `${newTournament.overs} overs/side`,
+        tossTime: 'TBA',
+        startTime: 'TBA',
+        winner: null,
+        resultSummary: '',
+      })),
+      rules: [],
+    };
+
+    const nextStore = {
+      activeTournamentId: id,
+      tournaments: [...store.tournaments, tournament],
+    };
+    tournament.teams.team1.squad.forEach((player) => autoRegisterPlayer(player.name));
+    tournament.teams.team2.squad.forEach((player) => autoRegisterPlayer(player.name));
+    saveTournamentData(nextStore);
+    setShowCreateTournament(false);
+    setNewTournament({
+      name: '', format: 'limited', overs: 10, matchCount: 3,
+      team1Name: '', team1Squad: '', team2Name: '', team2Squad: '',
+    });
+  };
+
+  const handleSelectTournament = (tournamentId) => {
+    saveTournamentData({ ...store, activeTournamentId: tournamentId });
+    setEditingScoreId(null);
+    setActiveSection('overview');
   };
 
   // Calculate Series Score (e.g. 1-0, 1-1, 2-0)
-  const assasinsWins = data.matches.filter(m => m.winner === 'assasins').length;
-  const battleWins = data.matches.filter(m => m.winner === 'battle').length;
+  const assasinsWins = data.matches.filter(m => m.winner === 'assasins' || m.winner === 'team1').length;
+  const battleWins = data.matches.filter(m => m.winner === 'battle' || m.winner === 'team2').length;
   const tiedCount = data.matches.filter(m => m.winner === 'tied').length;
   const playedCount = data.matches.filter(m => m.winner !== null).length;
+  const tournamentStats = buildPlayerStats(
+    appMatches.filter((match) => match.matchSettings?.tournamentId === data.id)
+  );
+  const tournamentPlayers = [
+    ...data.teams.team1.squad,
+    ...data.teams.team2.squad,
+  ].map((player) => ({
+    name: player.name,
+    stats: tournamentStats[player.name.toLowerCase()]?.tournament || getEmptyPlayerStats().tournament,
+  }));
+  const topRunScorer = [...tournamentPlayers].sort((a, b) => b.stats.runs - a.stats.runs)[0];
+  const topWicketTaker = [...tournamentPlayers].sort((a, b) => b.stats.wickets - a.stats.wickets)[0];
 
-  let seriesStatus = "Series not started yet (3-Match Championship)";
-  let seriesLeader = null;
+  const winsNeeded = Math.floor(data.matches.length / 2) + 1;
+  let seriesStatus = `Series not started yet (${data.matches.length}-Match Championship)`;
 
   if (assasinsWins > battleWins) {
-    seriesLeader = "Team Assasins";
-    if (assasinsWins >= 2) {
-      seriesStatus = `🏆 Team Assasins Won the Series (${assasinsWins}-${battleWins})!`;
+    if (assasinsWins >= winsNeeded) {
+      seriesStatus = `🏆 ${data.teams.team1.name} Won the Series (${assasinsWins}-${battleWins})!`;
     } else {
-      seriesStatus = `Team Assasins leads the series ${assasinsWins}-${battleWins}`;
+      seriesStatus = `${data.teams.team1.name} leads the series ${assasinsWins}-${battleWins}`;
     }
   } else if (battleWins > assasinsWins) {
-    seriesLeader = "Team Battle";
-    if (battleWins >= 2) {
-      seriesStatus = `🏆 Team Battle Won the Series (${battleWins}-${assasinsWins})!`;
+    if (battleWins >= winsNeeded) {
+      seriesStatus = `🏆 ${data.teams.team2.name} Won the Series (${battleWins}-${assasinsWins})!`;
     } else {
-      seriesStatus = `Team Battle leads the series ${battleWins}-${assasinsWins}`;
+      seriesStatus = `${data.teams.team2.name} leads the series ${battleWins}-${assasinsWins}`;
     }
   } else if (playedCount > 0) {
-    if (assasinsWins === battleWins && playedCount === 3) {
+    if (assasinsWins === battleWins && playedCount === data.matches.length) {
       seriesStatus = `Series Tied at ${assasinsWins}-${battleWins}!`;
     } else if (assasinsWins > 0) {
       seriesStatus = `Series deadlocked at ${assasinsWins}-${battleWins}!`;
@@ -184,7 +324,11 @@ export default function TournamentTab({ onStartTournamentMatch }) {
           return {
             ...match,
             winner: isSame ? null : winnerType,
-            resultSummary: isSame ? "" : (match.resultSummary || (winnerType === 'assasins' ? 'Team Assasins won' : winnerType === 'battle' ? 'Team Battle won' : 'Match Tied'))
+            resultSummary: isSame ? "" : (match.resultSummary || (
+              winnerType === 'team1' ? `${data.teams.team1.name} won`
+                : winnerType === 'team2' ? `${data.teams.team2.name} won`
+                  : 'Match Tied'
+            ))
           };
         }
         return match;
@@ -230,15 +374,59 @@ export default function TournamentTab({ onStartTournamentMatch }) {
 
   return (
     <div className="tournament-container" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1 }}>
+      <div className="tournament-manager-bar card">
+        <div>
+          <div className="tournament-selector-heading">
+            <label className="form-label" htmlFor="tournament-selector">Tournament</label>
+            <span className={`sync-status-pill ${isRealtimeEnabled() ? 'online' : 'offline'}`}>
+              <span /> {isRealtimeEnabled() ? 'Live sync' : 'Offline cache'}
+            </span>
+          </div>
+          <select
+            id="tournament-selector"
+            className="form-input"
+            value={data.id}
+            onChange={(event) => handleSelectTournament(event.target.value)}
+          >
+            {store.tournaments.map((tournament) => (
+              <option key={tournament.id} value={tournament.id}>{tournament.seriesTitle}</option>
+            ))}
+          </select>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowCreateTournament(true)}>
+          <Plus size={16} /> New Tournament
+        </button>
+      </div>
+
+      <div className="tournament-section-tabs" role="tablist" aria-label="Tournament sections">
+        {[
+          ['overview', 'Overview'],
+          ['fixtures', 'Fixtures'],
+          ['squads', 'Squads'],
+          ['stats', 'Stats'],
+        ].map(([section, label]) => (
+          <button
+            key={section}
+            role="tab"
+            aria-selected={activeSection === section}
+            className={activeSection === section ? 'active' : ''}
+            onClick={() => setActiveSection(section)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Top Banner & Official Header */}
-      <div className="tournament-header-banner card">
+      {activeSection === 'overview' && (
+      <div className="tournament-header-banner card compact-tournament-header">
         <div className="series-pill-badge">
           <Sparkles size={13} color="#00e5ff" />
           <span>{data.seriesTitle}</span>
         </div>
 
         <h1 className="tournament-main-title">
-          T10 CRICKET TOURNAMENT
+          {data.subTitle || 'CRICKET TOURNAMENT'}
         </h1>
         <div className="tournament-sub-header">
           FIXTURE & RULES
@@ -251,13 +439,13 @@ export default function TournamentTab({ onStartTournamentMatch }) {
         <div className="series-scoreboard-card">
           <div className="series-header-bar">
             <Trophy size={18} color="#ffea00" />
-            <span className="series-header-text">SERIES STANDINGS (BEST OF 3)</span>
+            <span className="series-header-text">SERIES STANDINGS (BEST OF {data.matches.length})</span>
           </div>
 
           <div className="series-vs-display">
             {/* Team 1 */}
             <div className={`series-team-box assasins ${assasinsWins > battleWins ? 'leading' : ''}`}>
-              <div className="team-flag-pill assasins">TEAM ASSASINS</div>
+              <div className="team-flag-pill assasins">{data.teams.team1.name}</div>
               <div className="series-big-score">{assasinsWins}</div>
               <div className="team-captain-sub">Capt. {data.teams.team1.captain}</div>
             </div>
@@ -269,7 +457,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
 
             {/* Team 2 */}
             <div className={`series-team-box battle ${battleWins > assasinsWins ? 'leading' : ''}`}>
-              <div className="team-flag-pill battle">TEAM BATTLE</div>
+              <div className="team-flag-pill battle">{data.teams.team2.name}</div>
               <div className="series-big-score">{battleWins}</div>
               <div className="team-captain-sub">Capt. {data.teams.team2.captain}</div>
             </div>
@@ -291,8 +479,11 @@ export default function TournamentTab({ onStartTournamentMatch }) {
           )}
         </div>
       </div>
+      )}
 
       {/* Official Playing Squads Section */}
+      {activeSection === 'squads' && (
+      <>
       <div className="section-title-wrap">
         <h2 className="section-title">
           <Award size={18} color="#00e5ff" />
@@ -315,9 +506,9 @@ export default function TournamentTab({ onStartTournamentMatch }) {
           <div className="squad-header assasins-header">
             <div>
               <span className="squad-tag">TEAM A</span>
-              <h3 className="squad-team-name">TEAM ASSASINS</h3>
+              <h3 className="squad-team-name">{data.teams.team1.name}</h3>
             </div>
-            <div className="squad-count-badge">5 Players</div>
+            <div className="squad-count-badge">{data.teams.team1.squad.length} Players</div>
           </div>
 
           <div className="squad-members-list">
@@ -345,9 +536,9 @@ export default function TournamentTab({ onStartTournamentMatch }) {
           <div className="squad-header battle-header">
             <div>
               <span className="squad-tag">TEAM B</span>
-              <h3 className="squad-team-name">TEAM BATTLE</h3>
+              <h3 className="squad-team-name">{data.teams.team2.name}</h3>
             </div>
-            <div className="squad-count-badge">5 Players</div>
+            <div className="squad-count-badge">{data.teams.team2.squad.length} Players</div>
           </div>
 
           <div className="squad-members-list">
@@ -370,20 +561,25 @@ export default function TournamentTab({ onStartTournamentMatch }) {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Official 3-Match Timetable & Fixture */}
+      {activeSection === 'fixtures' && (
+      <>
       <div className="section-title-wrap" style={{ marginTop: '16px' }}>
         <h2 className="section-title">
           <Calendar size={18} color="#00ff88" />
-          OFFICIAL 3-MATCH SERIES SCHEDULE
+          OFFICIAL {data.matches.length}-MATCH SERIES SCHEDULE
         </h2>
       </div>
 
       <div className="fixtures-container">
         {data.matches.map((m) => {
-          const isAssasinsWinner = m.winner === 'assasins';
-          const isBattleWinner = m.winner === 'battle';
+          const isAssasinsWinner = m.winner === 'assasins' || m.winner === 'team1';
+          const isBattleWinner = m.winner === 'battle' || m.winner === 'team2';
           const isTied = m.winner === 'tied';
+          const winnerClass = isAssasinsWinner ? 'assasins' : isBattleWinner ? 'battle' : 'tied';
           const isEditingThis = editingScoreId === m.id;
 
           return (
@@ -396,10 +592,10 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                   {m.format}
                 </div>
                 {m.winner && (
-                  <div className={`match-outcome-badge ${m.winner}`}>
+                  <div className={`match-outcome-badge ${winnerClass}`}>
                     <CheckCircle2 size={12} />
-                    {isAssasinsWinner && "Assasins Won"}
-                    {isBattleWinner && "Battle Won"}
+                    {isAssasinsWinner && `${data.teams.team1.name} Won`}
+                    {isBattleWinner && `${data.teams.team2.name} Won`}
                     {isTied && "Match Tied"}
                   </div>
                 )}
@@ -470,16 +666,16 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                 <div className="winner-buttons-row">
                   <button 
                     className={`btn-winner-pick assasins-btn ${isAssasinsWinner ? 'selected' : ''}`}
-                    onClick={() => handleSetWinner(m.id, 'assasins')}
+                    onClick={() => handleSetWinner(m.id, 'team1')}
                   >
-                    🏆 Assasins Won
+                    🏆 {data.teams.team1.name} Won
                   </button>
 
                   <button 
                     className={`btn-winner-pick battle-btn ${isBattleWinner ? 'selected' : ''}`}
-                    onClick={() => handleSetWinner(m.id, 'battle')}
+                    onClick={() => handleSetWinner(m.id, 'team2')}
                   >
-                    🏆 Battle Won
+                    🏆 {data.teams.team2.name} Won
                   </button>
 
                   <button 
@@ -506,13 +702,15 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                     className="btn-launch-match"
                     onClick={() => onStartTournamentMatch({
                       matchNumber: m.id,
+                      tournamentId: data.id,
+                      tournamentName: data.seriesTitle,
                       team1: data.teams.team1.name,
                       team2: data.teams.team2.name,
-                      overs: 10,
-                      format: 'limited'
+                      overs: data.overs,
+                      format: data.format
                     })}
                   >
-                    <Play size={14} /> Score {m.name} in App (10 Overs)
+                    <Play size={14} /> Score {m.name} in App ({data.format === 'test' ? 'Test' : `${data.overs} Overs`})
                   </button>
                 )}
               </div>
@@ -527,45 +725,181 @@ export default function TournamentTab({ onStartTournamentMatch }) {
           <AlertTriangle size={22} color="#ffea00" />
         </div>
         <div className="notice-content">
-          <div className="notice-title">MANDATORY TIMING NOTICE</div>
+          <div className="notice-title">TOURNAMENT SCHEDULING</div>
           <p className="notice-desc">
-            Reporting time for both teams is <strong>3:30 PM</strong>. The coin toss will take place promptly at <strong>3:40 PM</strong>, with play beginning at <strong>3:50 PM sharp</strong>.
+            Confirm the date, reporting time, toss time, and start time with both teams before each fixture.
           </p>
         </div>
       </div>
+      </>
+      )}
 
       {/* Special Tournament Rules & Match Regulations */}
-      <div className="section-title-wrap" style={{ marginTop: '20px' }}>
-        <h2 className="section-title">
-          <Shield size={18} color="#e11d48" />
-          SPECIAL TOURNAMENT RULES & REGULATIONS
-        </h2>
-      </div>
+      {activeSection === 'overview' && data.rules?.length > 0 && (
+        <>
+          <div className="section-title-wrap" style={{ marginTop: '20px' }}>
+            <h2 className="section-title">
+              <Shield size={18} color="#e11d48" />
+              SPECIAL TOURNAMENT RULES & REGULATIONS
+            </h2>
+          </div>
 
-      <div className="rules-grid">
-        {data.rules.map((rule) => (
-          <div key={rule.id} className="card rule-card">
-            <div className="rule-badge-num">
-              <span>◆</span>
-            </div>
-            <div className="rule-details">
-              <div className="rule-title-row">
-                <span className="rule-title">{rule.title}</span>
-                <span className="rule-highlight-pill">{rule.highlight}</span>
+          <div className="rules-grid">
+            {data.rules.map((rule) => (
+              <div key={rule.id} className="card rule-card">
+                <div className="rule-badge-num">
+                  <span>◆</span>
+                </div>
+                <div className="rule-details">
+                  <div className="rule-title-row">
+                    <span className="rule-title">{rule.title}</span>
+                    <span className="rule-highlight-pill">{rule.highlight}</span>
+                  </div>
+                  <p className="rule-text">{rule.desc}</p>
+                </div>
               </div>
-              <p className="rule-text">{rule.desc}</p>
+            ))}
+          </div>
+        </>
+      )}
+
+      {activeSection === 'stats' && (
+        <div className="tournament-stats-section">
+          <div className="section-title-wrap">
+            <h2 className="section-title">
+              <BarChart3 size={18} color="#ffea00" /> TOURNAMENT LEADERS
+            </h2>
+          </div>
+
+          <div className="tournament-leader-grid">
+            <div className="card tournament-leader-card runs">
+              <span>TOP RUN SCORER</span>
+              <strong>{topRunScorer?.name || 'No scores yet'}</strong>
+              <b>{topRunScorer?.stats.runs || 0} runs</b>
+            </div>
+            <div className="card tournament-leader-card wickets">
+              <span>TOP WICKET TAKER</span>
+              <strong>{topWicketTaker?.name || 'No scores yet'}</strong>
+              <b>{topWicketTaker?.stats.wickets || 0} wickets</b>
             </div>
           </div>
-        ))}
-      </div>
+
+          <div className="card tournament-stats-table-wrap">
+            <table className="tournament-stats-table">
+              <thead>
+                <tr><th>Player</th><th>M</th><th>Runs</th><th>Wkts</th><th>HS</th></tr>
+              </thead>
+              <tbody>
+                {[...tournamentPlayers]
+                  .sort((a, b) => b.stats.runs - a.stats.runs || b.stats.wickets - a.stats.wickets)
+                  .map((player) => (
+                    <tr key={player.name.toLowerCase()}>
+                      <td>{player.name}</td>
+                      <td>{player.stats.matches}</td>
+                      <td>{player.stats.runs}</td>
+                      <td>{player.stats.wickets}</td>
+                      <td>{player.stats.highestScore}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          {tournamentPlayers.every((player) => player.stats.matches === 0) && (
+            <p className="tournament-stats-empty">
+              Complete a match launched from this tournament to populate the leaderboard.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Footer Branding */}
       <div className="tournament-footer-banner">
         <div className="footer-line" />
         <span className="footer-tagline">
-          OFFICIAL T10 CRICKET CHAMPIONSHIP • TEAM ASSASINS vs TEAM BATTLE • 2026
+          {data.seriesTitle} • {data.teams.team1.name} vs {data.teams.team2.name}
         </span>
       </div>
+
+      <button
+        className="tournament-fab"
+        onClick={() => setShowCreateTournament(true)}
+        aria-label="Create new tournament"
+        title="Create new tournament"
+      >
+        <Plus size={24} />
+      </button>
+
+      {showCreateTournament && (
+        <div className="overlay" style={{ zIndex: 1200 }}>
+          <div className="modal tournament-create-modal">
+            <div className="tournament-modal-header">
+              <h3 className="modal-title">Create New Tournament</h3>
+              <button className="edit-name-btn" onClick={() => setShowCreateTournament(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTournament} className="tournament-create-form">
+              <div className="form-group">
+                <label className="form-label">Tournament Name</label>
+                <input className="form-input" required value={newTournament.name}
+                  placeholder="e.g. Winter Cup 2026"
+                  onChange={(event) => setNewTournament({ ...newTournament, name: event.target.value })} />
+              </div>
+
+              <div className="tournament-form-row">
+                <div className="form-group">
+                  <label className="form-label">Format</label>
+                  <select className="form-input" value={newTournament.format}
+                    onChange={(event) => setNewTournament({ ...newTournament, format: event.target.value })}>
+                    <option value="limited">Overs Match</option>
+                    <option value="test">Test Match</option>
+                  </select>
+                </div>
+                {newTournament.format === 'limited' && (
+                  <div className="form-group">
+                    <label className="form-label">Overs</label>
+                    <input className="form-input" type="number" min="1" max="100" required
+                      value={newTournament.overs}
+                      onChange={(event) => setNewTournament({ ...newTournament, overs: event.target.value })} />
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Matches</label>
+                  <input className="form-input" type="number" min="1" max="20" required
+                    value={newTournament.matchCount}
+                    onChange={(event) => setNewTournament({ ...newTournament, matchCount: event.target.value })} />
+                </div>
+              </div>
+
+              {['team1', 'team2'].map((teamKey, index) => (
+                <div key={teamKey} className="card tournament-team-form">
+                  <h4>Team {index + 1}</h4>
+                  <input className="form-input" required
+                    placeholder={`Team ${index + 1} name`}
+                    value={newTournament[`${teamKey}Name`]}
+                    onChange={(event) => setNewTournament({
+                      ...newTournament,
+                      [`${teamKey}Name`]: event.target.value,
+                    })} />
+                  <textarea className="form-input" required rows="4"
+                    placeholder="Squad names separated by commas or new lines. First player will be captain."
+                    value={newTournament[`${teamKey}Squad`]}
+                    onChange={(event) => setNewTournament({
+                      ...newTournament,
+                      [`${teamKey}Squad`]: event.target.value,
+                    })} />
+                </div>
+              ))}
+
+              <button className="btn btn-primary" type="submit">
+                <Trophy size={16} /> Create Tournament
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
