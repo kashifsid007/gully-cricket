@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Undo, ArrowRight, Edit2, Share2, Moon } from 'lucide-react';
+import { Undo, ArrowRight, Share2, Moon } from 'lucide-react';
 import BroadcastScorecard from './BroadcastScorecard';
 import BroadcastPlayerBanner from './BroadcastPlayerBanner';
 import ShareModal from './ShareModal';
-import { getPlayerByName, autoRegisterPlayer, getPlayerInitials } from '../utils/playerDb';
+import { getPlayerByName, autoRegisterPlayer } from '../utils/playerDb';
 import { getTeamSquad } from '../utils/squadDb';
 
 export default function GameScreen({
@@ -21,8 +21,28 @@ export default function GameScreen({
   onAllOut,
   onDayStumps,
 }) {
-  const currentInnings = inningsList[currentInningsIndex];
-  const isTest = matchSettings.format === 'test';
+  const fallbackInnings = {
+    team: 'Team 1',
+    bowlingTeam: 'Team 2',
+    runs: 0,
+    wickets: 0,
+    balls: 0,
+    declared: false,
+    allOutForce: false,
+    extras: { wide: 0, noBall: 0, bye: 0, legBye: 0 },
+    batsmen: {},
+    bowlers: {},
+    fallOfWickets: [],
+    overHistory: [],
+  };
+  const currentInnings = inningsList?.[currentInningsIndex] || fallbackInnings;
+  currentInnings.batsmen = currentInnings.batsmen || {};
+  currentInnings.bowlers = currentInnings.bowlers || {};
+  currentInnings.extras = currentInnings.extras || { wide: 0, noBall: 0, bye: 0, legBye: 0 };
+  currentInnings.fallOfWickets = Array.isArray(currentInnings.fallOfWickets) ? currentInnings.fallOfWickets : [];
+  currentInnings.overHistory = Array.isArray(currentInnings.overHistory) ? currentInnings.overHistory : [];
+
+  const isTest = matchSettings?.format === 'test';
   
   const battingSquad = getTeamSquad(currentInnings.team);
   const bowlingSquad = getTeamSquad(currentInnings.bowlingTeam);
@@ -68,16 +88,16 @@ export default function GameScreen({
   const bowlerProfile = getPlayerByName(bowlerName);
 
   // Helper calculations
-  const totalRuns = currentInnings.runs;
-  const totalWickets = currentInnings.wickets;
-  const totalBalls = currentInnings.balls;
+  const totalRuns = currentInnings.runs || 0;
+  const totalWickets = currentInnings.wickets || 0;
+  const totalBalls = currentInnings.balls || 0;
   const oversStr = `${Math.floor(totalBalls / 6)}.${totalBalls % 6}`;
   const runRate = totalBalls > 0 ? ((totalRuns / totalBalls) * 6).toFixed(2) : '0.00';
 
   // Get active batsmen stats
-  const strikerStats = currentInnings.batsmen[strikerName] || { runs: 0, balls: 0, fours: 0, sixes: 0 };
-  const nonStrikerStats = currentInnings.batsmen[nonStrikerName] || { runs: 0, balls: 0, fours: 0, sixes: 0 };
-  const bowlerStats = currentInnings.bowlers[bowlerName] || { balls: 0, maidens: 0, runs: 0, wickets: 0 };
+  const strikerStats = currentInnings.batsmen?.[strikerName] || { runs: 0, balls: 0, fours: 0, sixes: 0 };
+  const nonStrikerStats = currentInnings.batsmen?.[nonStrikerName] || { runs: 0, balls: 0, fours: 0, sixes: 0 };
+  const bowlerStats = currentInnings.bowlers?.[bowlerName] || { balls: 0, maidens: 0, runs: 0, wickets: 0 };
 
   // Calculate target and required runs
   let target = null;
@@ -203,7 +223,7 @@ export default function GameScreen({
   };
 
   // Check legal balls in current over:
-  const legalBallsInOver = currentInnings.overHistory.filter(x => !x.includes('wd') && !x.includes('nb')).length;
+  const legalBallsInOver = (currentInnings.overHistory || []).filter(x => !x.includes('wd') && !x.includes('nb')).length;
 
   const triggerNewBowlerPrompt = () => {
     setShowBowlerModal(true);

@@ -3,7 +3,7 @@ import {
   Trophy, Calendar, Clock, Shield, AlertTriangle, Play, 
   RotateCcw, CheckCircle2, UserCheck, Sparkles, Award, Plus, X, BarChart3
 } from 'lucide-react';
-import { autoRegisterPlayer } from '../utils/playerDb';
+import { autoRegisterPlayer, getAllPlayers } from '../utils/playerDb';
 import {
   getTournamentData,
   isRealtimeEnabled,
@@ -12,6 +12,7 @@ import {
   subscribeToTournament,
 } from '../utils/realtimeDb';
 import { buildPlayerStats, getEmptyPlayerStats } from '../utils/playerStats';
+import { determineMatchOutcome, isTeam1Winner, isTeam2Winner } from '../utils/matchOutcome';
 
 const INITIAL_TOURNAMENT_DATA = {
   id: 't10-championship-2026',
@@ -131,6 +132,72 @@ const INITIAL_TOURNAMENT_DATA = {
   ]
 };
 
+const getOffsetDate = (baseIsoStr, days) => {
+  const parts = (baseIsoStr || '').split('-');
+  const base = parts.length === 3
+    ? new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0)
+    : new Date();
+  base.setDate(base.getDate() + days);
+  const y = base.getFullYear();
+  const m = String(base.getMonth() + 1).padStart(2, '0');
+  const d = String(base.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const generateDefaultMatchDates = (startDateStr, count) => {
+  const dates = [];
+  const validCount = Math.max(1, Math.min(20, count || 1));
+  for (let i = 0; i < validCount; i++) {
+    dates.push(getOffsetDate(startDateStr, i * 2));
+  }
+  return dates;
+};
+
+const formatDateToDayString = (isoDateStr) => {
+  if (!isoDateStr) return 'To be scheduled';
+  try {
+    const parts = isoDateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(year, month, day, 12, 0, 0);
+      if (!isNaN(d.getTime())) {
+        const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
+        const dateMonthYear = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `${dateMonthYear} (${dayName})`;
+      }
+    }
+    const d = new Date(isoDateStr);
+    if (!isNaN(d.getTime())) {
+      const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
+      const dateMonthYear = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `${dateMonthYear} (${dayName})`;
+    }
+  } catch {
+    // fallback
+  }
+  return isoDateStr;
+};
+
+const getIsoDateFromMatch = (match) => {
+  if (match?.date && /^\d{4}-\d{2}-\d{2}$/.test(match.date)) {
+    return match.date;
+  }
+  if (match?.dateDay) {
+    const cleaned = match.dateDay.replace(/\bSept\b/i, 'Sep').replace(/\s*\([^)]*\)/, '').trim();
+    const parsed = Date.parse(cleaned);
+    if (!isNaN(parsed)) {
+      const d = new Date(parsed);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  }
+  return new Date().toISOString().split('T')[0];
+};
+
 const normalizeTournamentStore = (saved) => {
   if (Array.isArray(saved?.tournaments) && saved.tournaments.length > 0) {
     return saved;
@@ -150,33 +217,156 @@ const normalizeTournamentStore = (saved) => {
   };
 };
 
-const parseSquad = (value) => value
-  .split(/[\n,]+/)
-  .map((name) => name.trim())
-  .filter(Boolean)
-  .map((name, index) => ({ name, isCaptain: index === 0 }));
-
 export default function TournamentTab({ onStartTournamentMatch }) {
   const [store, setStore] = useState(() =>
     normalizeTournamentStore(getTournamentData(INITIAL_TOURNAMENT_DATA))
   );
 
+  const todayIso = new Date().toISOString().split('T')[0];
   const [syncMessage, setSyncMessage] = useState('');
   const [activeSection, setActiveSection] = useState('overview');
   const [appMatches, setAppMatches] = useState([]);
   const [editingScoreId, setEditingScoreId] = useState(null);
   const [customNote, setCustomNote] = useState('');
+  const [editingDateMatchId, setEditingDateMatchId] = useState(null);
+  const [tempMatchDate, setTempMatchDate] = useState('');
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [newTournament, setNewTournament] = useState({
     name: '',
     format: 'limited',
     overs: 10,
     matchCount: 3,
+    startDate: todayIso,
+    matchDates: generateDefaultMatchDates(todayIso, 3),
     team1Name: '',
-    team1Squad: '',
+    team1Squad: [],
     team2Name: '',
-    team2Squad: '',
+    team2Squad: [],
   });
+  const [newPlayerInput1, setNewPlayerInput1] = useState('');
+  const [newPlayerInput2, setNewPlayerInput2] = useState('');
+
+  const allDbPlayers = getAllPlayers();
+
+  const handleStartDateChange = (newStartDate) => {
+    setNewTournament(prev => {
+      const count = Math.max(1, Number(prev.matchCount) || 1);
+      const newDates = generateDefaultMatchDates(newStartDate, count);
+      return {
+        ...prev,
+        startDate: newStartDate,
+        matchDates: newDates,
+      };
+    });
+  };
+
+  const handleMatchCountChange = (newCount) => {
+    const num = Math.max(1, Math.min(20, Number(newCount) || 1));
+    setNewTournament(prev => {
+      const existing = prev.matchDates || [];
+      const updated = [];
+      for (let i = 0; i < num; i++) {
+        if (existing[i]) {
+          updated.push(existing[i]);
+        } else {
+          const lastDate = updated[i - 1] || prev.startDate || todayIso;
+          updated.push(getOffsetDate(lastDate, 2));
+        }
+      }
+      return {
+        ...prev,
+        matchCount: num,
+        matchDates: updated,
+      };
+    });
+  };
+
+  const handleSingleMatchDateChange = (matchIdx, newDate) => {
+    setNewTournament(prev => {
+      const copy = [...(prev.matchDates || [])];
+      copy[matchIdx] = newDate;
+      return {
+        ...prev,
+        matchDates: copy,
+        startDate: matchIdx === 0 ? newDate : prev.startDate,
+      };
+    });
+  };
+
+  const handleSaveMatchDate = (matchId) => {
+    if (!tempMatchDate) return;
+    const formatted = formatDateToDayString(tempMatchDate);
+    updateData(prev => ({
+      ...prev,
+      matches: prev.matches.map(m => {
+        if (m.id === matchId) {
+          return {
+            ...m,
+            date: tempMatchDate,
+            dateDay: formatted,
+          };
+        }
+        return m;
+      })
+    }));
+    setEditingDateMatchId(null);
+  };
+
+  const handleAddExistingPlayer = (teamKey, playerName) => {
+    if (!playerName) return;
+    const squadKey = `${teamKey}Squad`;
+    const currentSquad = newTournament[squadKey] || [];
+    if (currentSquad.some(p => p.name.toLowerCase() === playerName.toLowerCase())) {
+      alert(`${playerName} is already in Team ${teamKey === 'team1' ? '1' : '2'} squad!`);
+      return;
+    }
+    const isCaptain = currentSquad.length === 0;
+    setNewTournament(prev => ({
+      ...prev,
+      [squadKey]: [...currentSquad, { name: playerName, isCaptain }],
+    }));
+  };
+
+  const handleAddNewPlayer = (teamKey, rawName) => {
+    const trimmed = (rawName || '').trim();
+    if (!trimmed) return;
+    const squadKey = `${teamKey}Squad`;
+    const currentSquad = newTournament[squadKey] || [];
+    if (currentSquad.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
+      alert(`${trimmed} is already in the squad!`);
+      return;
+    }
+    autoRegisterPlayer(trimmed);
+    const isCaptain = currentSquad.length === 0;
+    setNewTournament(prev => ({
+      ...prev,
+      [squadKey]: [...currentSquad, { name: trimmed, isCaptain }],
+    }));
+  };
+
+  const handleRemovePlayer = (teamKey, indexToRemove) => {
+    const squadKey = `${teamKey}Squad`;
+    const updated = (newTournament[squadKey] || []).filter((_, idx) => idx !== indexToRemove);
+    if (updated.length > 0 && !updated.some(p => p.isCaptain)) {
+      updated[0].isCaptain = true;
+    }
+    setNewTournament(prev => ({
+      ...prev,
+      [squadKey]: updated,
+    }));
+  };
+
+  const handleSetCaptain = (teamKey, captainIndex) => {
+    const squadKey = `${teamKey}Squad`;
+    const updated = (newTournament[squadKey] || []).map((p, idx) => ({
+      ...p,
+      isCaptain: idx === captainIndex,
+    }));
+    setNewTournament(prev => ({
+      ...prev,
+      [squadKey]: updated,
+    }));
+  };
 
   const data = store.tournaments.find(
     (tournament) => tournament.id === store.activeTournamentId
@@ -203,22 +393,28 @@ export default function TournamentTab({ onStartTournamentMatch }) {
         tournament.id === data.id ? next : tournament
       ),
     };
+    setStore(nextStore);
     saveTournamentData(nextStore);
   };
 
   const handleCreateTournament = (event) => {
     event.preventDefault();
-    const team1Squad = parseSquad(newTournament.team1Squad);
-    const team2Squad = parseSquad(newTournament.team2Squad);
-    if (!newTournament.name.trim() || !newTournament.team1Name.trim() || !newTournament.team2Name.trim()) return;
+    const team1Squad = newTournament.team1Squad;
+    const team2Squad = newTournament.team2Squad;
+
+    if (!newTournament.name.trim() || !newTournament.team1Name.trim() || !newTournament.team2Name.trim()) {
+      alert('Please enter Tournament Name and both Team Names.');
+      return;
+    }
     if (team1Squad.length < 2 || team2Squad.length < 2) {
-      window.alert('Please add at least two players to each squad. The first player will be captain.');
+      window.alert('Please add at least two players to each team squad. Tap 👑 next to a player to set as Captain.');
       return;
     }
 
     const id = `tournament_${Date.now()}`;
     const isTest = newTournament.format === 'test';
     const matchCount = Math.max(1, Number(newTournament.matchCount) || 1);
+
     const tournament = {
       id,
       seriesTitle: newTournament.name.trim(),
@@ -226,29 +422,36 @@ export default function TournamentTab({ onStartTournamentMatch }) {
       docInfo: 'Playing squads, fixtures and live series standings',
       format: newTournament.format,
       overs: isTest ? null : Math.max(1, Number(newTournament.overs) || 1),
+      startDate: newTournament.startDate,
       teams: {
         team1: {
           name: newTournament.team1Name.trim(),
-          captain: team1Squad[0].name,
+          captain: team1Squad.find(p => p.isCaptain)?.name || team1Squad[0].name,
           squad: team1Squad,
         },
         team2: {
           name: newTournament.team2Name.trim(),
-          captain: team2Squad[0].name,
+          captain: team2Squad.find(p => p.isCaptain)?.name || team2Squad[0].name,
           squad: team2Squad,
         },
       },
-      matches: Array.from({ length: matchCount }, (_, index) => ({
-        id: `${id}_match_${index + 1}`,
-        name: `Match ${index + 1}`,
-        fixture: `${newTournament.team1Name.trim()} vs ${newTournament.team2Name.trim()}`,
-        dateDay: 'To be scheduled',
-        format: isTest ? 'Test Match' : `${newTournament.overs} overs/side`,
-        tossTime: 'TBA',
-        startTime: 'TBA',
-        winner: null,
-        resultSummary: '',
-      })),
+      matches: Array.from({ length: matchCount }, (_, index) => {
+        const rawDate = newTournament.matchDates?.[index] || getOffsetDate(newTournament.startDate, index * 2);
+        const formattedDate = formatDateToDayString(rawDate);
+
+        return {
+          id: `${id}_match_${index + 1}`,
+          name: `Match ${index + 1}`,
+          fixture: `${newTournament.team1Name.trim()} vs ${newTournament.team2Name.trim()}`,
+          date: rawDate,
+          dateDay: formattedDate,
+          format: isTest ? 'Test Match' : `${newTournament.overs} overs/side`,
+          tossTime: '3:40 PM',
+          startTime: '3:50 PM onwards',
+          winner: null,
+          resultSummary: '',
+        };
+      }),
       rules: [],
     };
 
@@ -262,8 +465,12 @@ export default function TournamentTab({ onStartTournamentMatch }) {
     setShowCreateTournament(false);
     setNewTournament({
       name: '', format: 'limited', overs: 10, matchCount: 3,
-      team1Name: '', team1Squad: '', team2Name: '', team2Squad: '',
+      startDate: todayIso,
+      matchDates: generateDefaultMatchDates(todayIso, 3),
+      team1Name: '', team1Squad: [], team2Name: '', team2Squad: [],
     });
+    setNewPlayerInput1('');
+    setNewPlayerInput2('');
   };
 
   const handleSelectTournament = (tournamentId) => {
@@ -272,11 +479,39 @@ export default function TournamentTab({ onStartTournamentMatch }) {
     setActiveSection('overview');
   };
 
-  // Calculate Series Score (e.g. 1-0, 1-1, 2-0)
-  const assasinsWins = data.matches.filter(m => m.winner === 'assasins' || m.winner === 'team1').length;
-  const battleWins = data.matches.filter(m => m.winner === 'battle' || m.winner === 'team2').length;
-  const tiedCount = data.matches.filter(m => m.winner === 'tied').length;
-  const playedCount = data.matches.filter(m => m.winner !== null).length;
+  const team1Name = data.teams?.team1?.name || 'Team 1';
+  const team2Name = data.teams?.team2?.name || 'Team 2';
+
+  // Automatically resolve match winners from completed App scoring or manual entries
+  const resolvedMatches = (data.matches || []).map((m) => {
+    if (m.winner) return m;
+
+    // Search for a completed match scored in the app for this tournament fixture
+    const appMatch = appMatches.find((am) =>
+      am.matchSettings?.tournamentId === data.id &&
+      String(am.matchSettings?.tournamentMatchId) === String(m.id) &&
+      (am.status === 'Completed' || am.screen === 'SUMMARY')
+    );
+
+    if (appMatch) {
+      const outcome = determineMatchOutcome(appMatch.inningsList, appMatch.matchSettings, appMatch.toss);
+      if (outcome.winner) {
+        return {
+          ...m,
+          winner: outcome.winner,
+          resultSummary: m.resultSummary || outcome.summary,
+        };
+      }
+    }
+    return m;
+  });
+
+  // Calculate Series Score (e.g. 1-0, 1-1, 2-0) supporting all winner variations
+  const assasinsWins = resolvedMatches.filter(m => isTeam1Winner(m.winner, team1Name)).length;
+  const battleWins = resolvedMatches.filter(m => isTeam2Winner(m.winner, team2Name)).length;
+  const tiedCount = resolvedMatches.filter(m => m.winner === 'tied').length;
+  const playedCount = resolvedMatches.filter(m => m.winner !== null && m.winner !== undefined).length;
+
   const tournamentStats = buildPlayerStats(
     appMatches.filter((match) => match.matchSettings?.tournamentId === data.id)
   );
@@ -290,23 +525,23 @@ export default function TournamentTab({ onStartTournamentMatch }) {
   const topRunScorer = [...tournamentPlayers].sort((a, b) => b.stats.runs - a.stats.runs)[0];
   const topWicketTaker = [...tournamentPlayers].sort((a, b) => b.stats.wickets - a.stats.wickets)[0];
 
-  const winsNeeded = Math.floor(data.matches.length / 2) + 1;
-  let seriesStatus = `Series not started yet (${data.matches.length}-Match Championship)`;
+  const winsNeeded = Math.floor(resolvedMatches.length / 2) + 1;
+  let seriesStatus = `Series not started yet (${resolvedMatches.length}-Match Championship)`;
 
   if (assasinsWins > battleWins) {
     if (assasinsWins >= winsNeeded) {
-      seriesStatus = `🏆 ${data.teams.team1.name} Won the Series (${assasinsWins}-${battleWins})!`;
+      seriesStatus = `🏆 ${team1Name} Won the Series (${assasinsWins}-${battleWins})!`;
     } else {
-      seriesStatus = `${data.teams.team1.name} leads the series ${assasinsWins}-${battleWins}`;
+      seriesStatus = `${team1Name} leads the series ${assasinsWins}-${battleWins}`;
     }
   } else if (battleWins > assasinsWins) {
     if (battleWins >= winsNeeded) {
-      seriesStatus = `🏆 ${data.teams.team2.name} Won the Series (${battleWins}-${assasinsWins})!`;
+      seriesStatus = `🏆 ${team2Name} Won the Series (${battleWins}-${assasinsWins})!`;
     } else {
-      seriesStatus = `${data.teams.team2.name} leads the series ${battleWins}-${assasinsWins}`;
+      seriesStatus = `${team2Name} leads the series ${battleWins}-${assasinsWins}`;
     }
   } else if (playedCount > 0) {
-    if (assasinsWins === battleWins && playedCount === data.matches.length) {
+    if (assasinsWins === battleWins && playedCount === resolvedMatches.length) {
       seriesStatus = `Series Tied at ${assasinsWins}-${battleWins}!`;
     } else if (assasinsWins > 0) {
       seriesStatus = `Series deadlocked at ${assasinsWins}-${battleWins}!`;
@@ -315,18 +550,18 @@ export default function TournamentTab({ onStartTournamentMatch }) {
     }
   }
 
-  // Handle Match Result Change
+  // Handle Match Result Change (manual override or quick picker)
   const handleSetWinner = (matchId, winnerType) => {
     updateData(prev => {
-      const updatedMatches = prev.matches.map(match => {
-        if (match.id === matchId) {
+      const updatedMatches = (prev.matches || []).map(match => {
+        if (String(match.id) === String(matchId)) {
           const isSame = match.winner === winnerType;
           return {
             ...match,
             winner: isSame ? null : winnerType,
             resultSummary: isSame ? "" : (match.resultSummary || (
-              winnerType === 'team1' ? `${data.teams.team1.name} won`
-                : winnerType === 'team2' ? `${data.teams.team2.name} won`
+              winnerType === 'team1' ? `${team1Name} won`
+                : winnerType === 'team2' ? `${team2Name} won`
                   : 'Match Tied'
             ))
           };
@@ -339,8 +574,8 @@ export default function TournamentTab({ onStartTournamentMatch }) {
 
   const handleSaveResultSummary = (matchId) => {
     updateData(prev => {
-      const updatedMatches = prev.matches.map(match => {
-        if (match.id === matchId) {
+      const updatedMatches = (prev.matches || []).map(match => {
+        if (String(match.id) === String(matchId)) {
           return { ...match, resultSummary: customNote };
         }
         return match;
@@ -352,10 +587,10 @@ export default function TournamentTab({ onStartTournamentMatch }) {
   };
 
   const handleResetSeries = () => {
-    if (window.confirm("Reset all 3 match results and series score back to 0-0?")) {
+    if (window.confirm(`Reset all ${resolvedMatches.length} match results and series score back to 0-0?`)) {
       updateData(prev => ({
         ...prev,
-        matches: prev.matches.map(m => ({ ...m, winner: null, resultSummary: "" }))
+        matches: (prev.matches || []).map(m => ({ ...m, winner: null, resultSummary: "" }))
       }));
     }
   };
@@ -421,7 +656,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
       {activeSection === 'overview' && (
       <div className="tournament-header-banner card compact-tournament-header">
         <div className="series-pill-badge">
-          <Sparkles size={13} color="#00e5ff" />
+          <Sparkles size={13} color="var(--primary)" />
           <span>{data.seriesTitle}</span>
         </div>
 
@@ -438,8 +673,8 @@ export default function TournamentTab({ onStartTournamentMatch }) {
         {/* Big Live Series Standings Scorecard */}
         <div className="series-scoreboard-card">
           <div className="series-header-bar">
-            <Trophy size={18} color="#ffea00" />
-            <span className="series-header-text">SERIES STANDINGS (BEST OF {data.matches.length})</span>
+            <Trophy size={18} color="var(--primary)" />
+            <span className="series-header-text">SERIES STANDINGS (BEST OF {resolvedMatches.length})</span>
           </div>
 
           <div className="series-vs-display">
@@ -486,7 +721,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
       <>
       <div className="section-title-wrap">
         <h2 className="section-title">
-          <Award size={18} color="#00e5ff" />
+          <Award size={18} color="var(--primary)" />
           OFFICIAL PLAYING SQUADS
         </h2>
         <button className="sync-btn" onClick={handleSyncPlayers}>
@@ -569,15 +804,15 @@ export default function TournamentTab({ onStartTournamentMatch }) {
       <>
       <div className="section-title-wrap" style={{ marginTop: '16px' }}>
         <h2 className="section-title">
-          <Calendar size={18} color="#00ff88" />
-          OFFICIAL {data.matches.length}-MATCH SERIES SCHEDULE
+          <Calendar size={18} color="var(--primary)" />
+          OFFICIAL {resolvedMatches.length}-MATCH SERIES SCHEDULE
         </h2>
       </div>
 
       <div className="fixtures-container">
-        {data.matches.map((m) => {
-          const isAssasinsWinner = m.winner === 'assasins' || m.winner === 'team1';
-          const isBattleWinner = m.winner === 'battle' || m.winner === 'team2';
+        {resolvedMatches.map((m) => {
+          const isAssasinsWinner = isTeam1Winner(m.winner, team1Name);
+          const isBattleWinner = isTeam2Winner(m.winner, team2Name);
           const isTied = m.winner === 'tied';
           const winnerClass = isAssasinsWinner ? 'assasins' : isBattleWinner ? 'battle' : 'tied';
           const isEditingThis = editingScoreId === m.id;
@@ -594,8 +829,8 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                 {m.winner && (
                   <div className={`match-outcome-badge ${winnerClass}`}>
                     <CheckCircle2 size={12} />
-                    {isAssasinsWinner && `${data.teams.team1.name} Won`}
-                    {isBattleWinner && `${data.teams.team2.name} Won`}
+                    {isAssasinsWinner && `${team1Name} Won`}
+                    {isBattleWinner && `${team2Name} Won`}
                     {isTied && "Match Tied"}
                   </div>
                 )}
@@ -605,20 +840,77 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                 {m.fixture}
               </div>
 
-              <div className="fixture-info-grid">
-                <div className="info-chip">
-                  <Calendar size={13} color="#93c5fd" />
-                  <span><strong>Date & Day:</strong> {m.dateDay}</span>
+              {editingDateMatchId === m.id ? (
+                <div className="card" style={{ padding: '10px 12px', marginBottom: '10px', background: 'var(--soft-surface)', border: '1px solid var(--primary)', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Calendar size={14} /> Change Date for {m.name}
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                        {formatDateToDayString(tempMatchDate)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ flex: 1, minWidth: '150px', padding: '6px 10px', fontSize: '0.84rem' }}
+                        value={tempMatchDate}
+                        onChange={(e) => setTempMatchDate(e.target.value)}
+                        autoFocus
+                      />
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button 
+                          type="button" 
+                          className="btn btn-sm btn-primary"
+                          style={{ padding: '6px 14px', fontSize: '0.78rem', width: 'auto' }}
+                          onClick={() => handleSaveMatchDate(m.id)}
+                        >
+                          Save
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn btn-sm btn-secondary"
+                          style={{ padding: '6px 10px', fontSize: '0.78rem', width: 'auto' }}
+                          onClick={() => setEditingDateMatchId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="info-chip">
-                  <Clock size={13} color="#ffea00" />
-                  <span><strong>Toss:</strong> {m.tossTime}</span>
+              ) : (
+                <div className="fixture-info-grid">
+                  <div className="info-chip" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, minWidth: '180px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Calendar size={13} color="var(--primary)" />
+                      <span><strong>Date & Day:</strong> {m.dateDay}</span>
+                    </div>
+                    <button 
+                      type="button"
+                      className="btn-text-edit" 
+                      style={{ fontSize: '0.7rem', marginLeft: '8px' }}
+                      onClick={() => {
+                        setEditingDateMatchId(m.id);
+                        setTempMatchDate(getIsoDateFromMatch(m));
+                      }}
+                      title="Change date of this match"
+                    >
+                      Change Date
+                    </button>
+                  </div>
+                  <div className="info-chip">
+                    <Clock size={13} color="var(--primary)" />
+                    <span><strong>Toss:</strong> {m.tossTime}</span>
+                  </div>
+                  <div className="info-chip">
+                    <Play size={13} color="#10b981" />
+                    <span><strong>Start:</strong> {m.startTime}</span>
+                  </div>
                 </div>
-                <div className="info-chip">
-                  <Play size={13} color="#00ff88" />
-                  <span><strong>Start:</strong> {m.startTime}</span>
-                </div>
-              </div>
+              )}
 
               {/* Match Result / Score Note */}
               {m.resultSummary && !isEditingThis && (
@@ -668,14 +960,14 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                     className={`btn-winner-pick assasins-btn ${isAssasinsWinner ? 'selected' : ''}`}
                     onClick={() => handleSetWinner(m.id, 'team1')}
                   >
-                    🏆 {data.teams.team1.name} Won
+                    🏆 {team1Name} Won
                   </button>
 
                   <button 
                     className={`btn-winner-pick battle-btn ${isBattleWinner ? 'selected' : ''}`}
                     onClick={() => handleSetWinner(m.id, 'team2')}
                   >
-                    🏆 {data.teams.team2.name} Won
+                    🏆 {team2Name} Won
                   </button>
 
                   <button 
@@ -722,7 +1014,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
       {/* Official Reporting Time & Toss Alert Notice */}
       <div className="timing-notice-card">
         <div className="notice-icon-box">
-          <AlertTriangle size={22} color="#ffea00" />
+          <AlertTriangle size={22} color="var(--primary)" />
         </div>
         <div className="notice-content">
           <div className="notice-title">TOURNAMENT SCHEDULING</div>
@@ -739,7 +1031,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
         <>
           <div className="section-title-wrap" style={{ marginTop: '20px' }}>
             <h2 className="section-title">
-              <Shield size={18} color="#e11d48" />
+              <Shield size={18} color="#ff4766" />
               SPECIAL TOURNAMENT RULES & REGULATIONS
             </h2>
           </div>
@@ -767,7 +1059,7 @@ export default function TournamentTab({ onStartTournamentMatch }) {
         <div className="tournament-stats-section">
           <div className="section-title-wrap">
             <h2 className="section-title">
-              <BarChart3 size={18} color="#ffea00" /> TOURNAMENT LEADERS
+              <BarChart3 size={18} color="var(--primary)" /> TOURNAMENT LEADERS
             </h2>
           </div>
 
@@ -869,31 +1161,237 @@ export default function TournamentTab({ onStartTournamentMatch }) {
                   <label className="form-label">Matches</label>
                   <input className="form-input" type="number" min="1" max="20" required
                     value={newTournament.matchCount}
-                    onChange={(event) => setNewTournament({ ...newTournament, matchCount: event.target.value })} />
+                    onChange={(event) => handleMatchCountChange(event.target.value)} />
                 </div>
               </div>
 
-              {['team1', 'team2'].map((teamKey, index) => (
-                <div key={teamKey} className="card tournament-team-form">
-                  <h4>Team {index + 1}</h4>
-                  <input className="form-input" required
-                    placeholder={`Team ${index + 1} name`}
-                    value={newTournament[`${teamKey}Name`]}
-                    onChange={(event) => setNewTournament({
-                      ...newTournament,
-                      [`${teamKey}Name`]: event.target.value,
-                    })} />
-                  <textarea className="form-input" required rows="4"
-                    placeholder="Squad names separated by commas or new lines. First player will be captain."
-                    value={newTournament[`${teamKey}Squad`]}
-                    onChange={(event) => setNewTournament({
-                      ...newTournament,
-                      [`${teamKey}Squad`]: event.target.value,
-                    })} />
-                </div>
-              ))}
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Calendar size={13} color="var(--primary)" />
+                  Tournament Start Date (Series Opener)
+                </label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  required 
+                  value={newTournament.startDate}
+                  onChange={(event) => handleStartDateChange(event.target.value)} 
+                />
+              </div>
 
-              <button className="btn btn-primary" type="submit">
+              {/* Match Dates customization */}
+              <div className="card" style={{ padding: '12px', marginBottom: '14px', background: 'var(--soft-surface)', border: '1px solid var(--divider)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={13} color="var(--primary)" />
+                    Choose Date for Each Match ({newTournament.matchDates.length} Matches)
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Pick custom dates
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                  {newTournament.matchDates.map((mDate, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        background: 'var(--card-bg)', 
+                        padding: '8px 10px', 
+                        borderRadius: '8px', 
+                        border: '1px solid var(--divider)' 
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
+                          Match {idx + 1}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          {formatDateToDayString(mDate).split('(')[1]?.replace(')', '') || ''}
+                        </span>
+                      </div>
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ padding: '5px 8px', fontSize: '0.82rem' }}
+                        required
+                        value={mDate}
+                        onChange={(e) => handleSingleMatchDateChange(idx, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {['team1', 'team2'].map((teamKey, index) => {
+                const squad = newTournament[`${teamKey}Squad`] || [];
+                const teamLabel = `Team ${index + 1}`;
+                const currentInputValue = teamKey === 'team1' ? newPlayerInput1 : newPlayerInput2;
+                const setInputValue = teamKey === 'team1' ? setNewPlayerInput1 : setNewPlayerInput2;
+
+                const availablePlayers = allDbPlayers.filter(
+                  (ap) => !squad.some(sp => sp.name.toLowerCase() === ap.name.toLowerCase())
+                );
+
+                return (
+                  <div key={teamKey} className="card tournament-team-form" style={{ padding: '12px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: index === 0 ? 'var(--primary)' : 'var(--accent)' }}>
+                        {teamLabel} Setup
+                      </h4>
+                      <span className="badge" style={{ fontSize: '0.72rem', background: 'var(--soft-surface)', color: 'var(--text-secondary)' }}>
+                        {squad.length} Players
+                      </span>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label className="form-label">{teamLabel} Name</label>
+                      <input className="form-input" required
+                        placeholder={`e.g. ${index === 0 ? 'Team Assasins' : 'Team Battle'}`}
+                        value={newTournament[`${teamKey}Name`]}
+                        onChange={(event) => setNewTournament({
+                          ...newTournament,
+                          [`${teamKey}Name`]: event.target.value,
+                        })} />
+                    </div>
+
+                    {/* Choose from Dropdown */}
+                    <div className="form-group" style={{ marginBottom: '8px' }}>
+                      <label className="form-label" style={{ fontSize: '0.74rem' }}>
+                        Choose Player from Dropdown
+                      </label>
+                      <select
+                        className="form-input"
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAddExistingPlayer(teamKey, e.target.value);
+                          }
+                        }}
+                      >
+                        <option value="">
+                          {availablePlayers.length > 0 
+                            ? `-- Select registered player (${availablePlayers.length} available) --`
+                            : '-- No more registered players --'}
+                        </option>
+                        {availablePlayers.map((p) => (
+                          <option key={p.id || p.name} value={p.name}>
+                            🏏 {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Or Add New Player */}
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label className="form-label" style={{ fontSize: '0.74rem' }}>
+                        Or Add New Player
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ flex: 1, padding: '7px 10px', fontSize: '0.84rem' }}
+                          placeholder="Type new player name..."
+                          value={currentInputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddNewPlayer(teamKey, currentInputValue);
+                              setInputValue('');
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '7px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap', width: 'auto' }}
+                          onClick={() => {
+                            handleAddNewPlayer(teamKey, currentInputValue);
+                            setInputValue('');
+                          }}
+                        >
+                          <Plus size={13} /> Add
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Squad Members Chips List */}
+                    <div style={{ 
+                      minHeight: '44px', 
+                      background: 'var(--soft-surface)', 
+                      border: '1px solid var(--divider)', 
+                      borderRadius: '8px', 
+                      padding: '8px' 
+                    }}>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        Squad List (Tap 👑 to set captain):
+                      </div>
+                      {squad.length === 0 ? (
+                        <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--text-muted)', textAlign: 'center', padding: '6px 0' }}>
+                          No players added yet. Choose from dropdown or add new player above.
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {squad.map((player, pIdx) => (
+                            <div
+                              key={pIdx}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '4px 10px',
+                                fontSize: '0.75rem',
+                                borderRadius: '20px',
+                                background: player.isCaptain ? 'rgba(255, 234, 0, 0.12)' : 'var(--field-bg)',
+                                border: player.isCaptain ? '1.5px solid var(--warning)' : '1px solid var(--divider)',
+                                color: 'var(--text-primary)',
+                              }}
+                            >
+                              <span style={{ fontWeight: 700 }}>{player.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleSetCaptain(teamKey, pIdx)}
+                                title={player.isCaptain ? 'Team Captain' : 'Click to make Captain'}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  fontSize: '0.85rem',
+                                  opacity: player.isCaptain ? 1 : 0.35,
+                                }}
+                              >
+                                👑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePlayer(teamKey, pIdx)}
+                                title="Remove player from squad"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--error)',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  fontWeight: 'bold',
+                                  fontSize: '0.85rem',
+                                  lineHeight: 1,
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button className="btn btn-primary" type="submit" style={{ marginTop: '8px' }}>
                 <Trophy size={16} /> Create Tournament
               </button>
             </form>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Shield, ArrowLeft, ArrowRightLeft, Sparkles, Edit2, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, Sparkles, Edit2 } from 'lucide-react';
 import { autoRegisterPlayer } from '../utils/playerDb';
 import { getTeamSquad } from '../utils/squadDb';
 
@@ -8,9 +8,9 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
   const bowlingSquad = getTeamSquad(bowlingTeam);
 
   // Default player picks
-  const defaultStriker = battingSquad[0]?.name || 'KASHIF';
-  const defaultNonStriker = battingSquad[1]?.name || (battingSquad[0]?.name ? battingSquad[0].name + ' 2' : 'Batter 2');
-  const defaultBowler = bowlingSquad[0]?.name || 'Bowler 1';
+  const defaultStriker = battingSquad[0]?.name || `${battingTeam || 'Team 1'} Batter 1`;
+  const defaultNonStriker = battingSquad[1]?.name || (battingSquad[0]?.name ? battingSquad[0].name + ' 2' : `${battingTeam || 'Team 1'} Batter 2`);
+  const defaultBowler = bowlingSquad[0]?.name || `${bowlingTeam || 'Team 2'} Bowler 1`;
 
   const [striker, setStriker] = useState(defaultStriker);
   const [nonStriker, setNonStriker] = useState(defaultNonStriker);
@@ -23,9 +23,15 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
 
   // Initialize on mount or team change
   useEffect(() => {
-    if (battingSquad.length >= 1) setStriker(battingSquad[0].name);
-    if (battingSquad.length >= 2) setNonStriker(battingSquad[1].name);
-    if (bowlingSquad.length >= 1) setBowler(bowlingSquad[0].name);
+    const s1 = battingSquad[0]?.name || `${battingTeam || 'Team 1'} Batter 1`;
+    const s2 = battingSquad[1]?.name || (battingSquad[0]?.name ? battingSquad[0].name + ' 2' : `${battingTeam || 'Team 1'} Batter 2`);
+    const b1 = bowlingSquad[0]?.name || `${bowlingTeam || 'Team 2'} Bowler 1`;
+    setStriker(s1);
+    setNonStriker(s2);
+    setBowler(b1);
+    setShowCustomStriker(false);
+    setShowCustomNonStriker(false);
+    setShowCustomBowler(false);
   }, [battingTeam, bowlingTeam]);
 
   // Swap striker and non-striker
@@ -37,11 +43,22 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const sName = striker.trim();
-    const nsName = nonStriker.trim();
-    const bName = bowler.trim();
+    const sName = (striker || '').trim();
+    const nsName = (nonStriker || '').trim();
+    const bName = (bowler || '').trim();
 
-    if (!sName || !nsName || !bName) return;
+    if (!sName) {
+      alert('Please select or type Striker 1 (Batter on strike)!');
+      return;
+    }
+    if (!nsName) {
+      alert('Please select or type Striker 2 (Non-Striker)!');
+      return;
+    }
+    if (!bName) {
+      alert('Please select or type an Opening Bowler!');
+      return;
+    }
     if (sName.toLowerCase() === nsName.toLowerCase()) {
       alert('Striker 1 and Striker 2 (Non-Striker) cannot have the same name!');
       return;
@@ -115,8 +132,8 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
           {/* STRIKER 1 */}
           <div className="lineup-field-group" style={{ gap: '4px' }}>
             <div className="lineup-field-header">
-              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#00e5ff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🏏 Striker 1 (On Strike): <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>{striker}</strong>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🏏 Striker 1 (On Strike): <strong style={{ color: 'var(--text-primary)', textDecoration: 'underline' }}>{striker}</strong>
               </span>
               <button
                 type="button"
@@ -180,8 +197,8 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
           {/* STRIKER 2 (NON-STRIKER) */}
           <div className="lineup-field-group" style={{ gap: '4px' }}>
             <div className="lineup-field-header">
-              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#00ff88', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🏃 Striker 2 (Non-Striker): <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>{nonStriker}</strong>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🏃 Striker 2 (Non-Striker): <strong style={{ color: 'var(--text-primary)', textDecoration: 'underline' }}>{nonStriker}</strong>
               </span>
               <button
                 type="button"
@@ -243,8 +260,8 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
 
           <div className="lineup-field-group" style={{ gap: '4px' }}>
             <div className="lineup-field-header">
-              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#fb7185', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🥎 Opening Bowler: <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>{bowler}</strong>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🥎 Opening Bowler: <strong style={{ color: 'var(--text-primary)', textDecoration: 'underline' }}>{bowler}</strong>
               </span>
               <button
                 type="button"
@@ -294,15 +311,15 @@ export default function StrikerSetupScreen({ battingTeam, bowlingTeam, chaseTarg
 
         {/* Selected Lineup Summary Pill */}
         <div style={{ 
-          background: 'rgba(0, 0, 0, 0.3)', 
-          border: '1px solid rgba(255, 255, 255, 0.1)', 
+          background: 'var(--soft-surface)', 
+          border: '1px solid var(--divider)', 
           borderRadius: '8px', 
-          padding: '6px 10px', 
-          fontSize: '0.72rem', 
+          padding: '8px 10px', 
+          fontSize: '0.74rem', 
           textAlign: 'center', 
-          color: 'var(--text-secondary)' 
+          color: 'var(--text-primary)' 
         }}>
-          🏏 Batting: <strong style={{ color: '#00e5ff' }}>{striker}</strong> & <strong style={{ color: '#00ff88' }}>{nonStriker}</strong> | 🥎 Bowling: <strong style={{ color: '#fb7185' }}>{bowler}</strong>
+          🏏 Batting: <strong style={{ color: 'var(--primary)' }}>{striker}</strong> & <strong style={{ color: 'var(--secondary)' }}>{nonStriker}</strong> | 🥎 Bowling: <strong style={{ color: 'var(--accent)' }}>{bowler}</strong>
         </div>
 
         {/* SUBMIT BUTTON */}

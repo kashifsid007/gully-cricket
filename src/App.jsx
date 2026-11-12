@@ -9,29 +9,41 @@ import PlayersTab from './components/PlayersTab';
 import IncompleteMatchesTab from './components/IncompleteMatchesTab';
 import TournamentTab from './components/TournamentTab';
 import Navbar from './components/Navbar';
-import { Moon, Sun } from 'lucide-react';
 import {
   getSyncClientId,
   subscribeToMatches,
   subscribeToPlayers,
+  updateTournamentMatchResult,
   upsertMatch,
 } from './utils/realtimeDb';
+import { determineMatchOutcome } from './utils/matchOutcome';
 
 // Deep cloning helper
 const cloneState = (stateObj) => JSON.parse(JSON.stringify(stateObj));
 
 const THEME_STORAGE_KEY = 'gully-cricket-theme';
 
-const getInitialTheme = () => {
-  if (typeof window === 'undefined') return 'dark';
+const ensureInningsShape = (inn, battingTeam = 'Team 1', bowlingTeam = 'Team 2') => ({
+  team: inn?.team || battingTeam || 'Team 1',
+  bowlingTeam: inn?.bowlingTeam || bowlingTeam || 'Team 2',
+  runs: Number(inn?.runs) || 0,
+  wickets: Number(inn?.wickets) || 0,
+  balls: Number(inn?.balls) || 0,
+  declared: Boolean(inn?.declared),
+  allOutForce: Boolean(inn?.allOutForce),
+  extras: {
+    wide: Number(inn?.extras?.wide) || 0,
+    noBall: Number(inn?.extras?.noBall) || 0,
+    bye: Number(inn?.extras?.bye) || 0,
+    legBye: Number(inn?.extras?.legBye) || 0,
+  },
+  batsmen: inn?.batsmen && typeof inn.batsmen === 'object' ? { ...inn.batsmen } : {},
+  bowlers: inn?.bowlers && typeof inn.bowlers === 'object' ? { ...inn.bowlers } : {},
+  fallOfWickets: Array.isArray(inn?.fallOfWickets) ? [...inn.fallOfWickets] : [],
+  overHistory: Array.isArray(inn?.overHistory) ? [...inn.overHistory] : [],
+});
 
-  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
-
-const createInnings = (battingTeam, bowlingTeam) => ({
+const createInnings = (battingTeam, bowlingTeam) => ensureInningsShape({
   team: battingTeam,
   bowlingTeam: bowlingTeam,
   runs: 0,
@@ -44,10 +56,9 @@ const createInnings = (battingTeam, bowlingTeam) => ({
   bowlers: {},
   fallOfWickets: [],
   overHistory: [],
-});
+}, battingTeam, bowlingTeam);
 
 export default function App() {
-  const [theme, setTheme] = useState(getInitialTheme);
   const [activeTab, setActiveTab] = useState('scorecard'); // 'scorecard', 'players', 'incomplete', 'history'
   const [screen, setScreen] = useState('SETUP'); // SETUP, TOSS, STRIKER_SETUP, GAME, SUMMARY, HISTORY
   const [prevScreen, setPrevScreen] = useState('SETUP');
@@ -78,13 +89,13 @@ export default function App() {
   const lastRemoteVersion = useRef(0);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    document.documentElement.dataset.theme = 'sky';
+    document.documentElement.style.colorScheme = 'dark';
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'sky');
 
     const themeColor = document.querySelector('meta[name="theme-color"]');
-    themeColor?.setAttribute('content', theme === 'dark' ? '#070d30' : '#eef7f3');
-  }, [theme]);
+    themeColor?.setAttribute('content', '#121622');
+  }, []);
 
   // Central navigation function synchronized with browser history
   const navigateTo = (newTab, newScreen, replace = false) => {
@@ -171,7 +182,15 @@ export default function App() {
 
       setMatchSettings(sharedMatch.matchSettings);
       setToss(sharedMatch.toss);
-      setInningsList(sharedMatch.inningsList || []);
+      setInningsList(
+        (sharedMatch.inningsList || []).map((inn, idx) =>
+          ensureInningsShape(
+            inn,
+            idx % 2 === 0 ? sharedMatch.toss?.battingFirst : sharedMatch.toss?.bowlingFirst,
+            idx % 2 === 0 ? sharedMatch.toss?.bowlingFirst : sharedMatch.toss?.battingFirst
+          )
+        )
+      );
       setCurrentInningsIndex(sharedMatch.currentInningsIndex || 0);
       setStrikerName(sharedMatch.strikerName || '');
       setNonStrikerName(sharedMatch.nonStrikerName || '');
@@ -216,6 +235,19 @@ export default function App() {
         status: screen === 'SUMMARY' ? 'Completed' : (stumpsStatus || 'Incomplete')
       };
       upsertMatch(matchData);
+
+      // Auto-update tournament series result when match completes
+      if (screen === 'SUMMARY' && matchSettings?.competitionType === 'tournament' && matchSettings?.tournamentId && matchSettings?.tournamentMatchId) {
+        const outcome = determineMatchOutcome(inningsList, matchSettings, toss);
+        if (outcome.winner) {
+          updateTournamentMatchResult(
+            matchSettings.tournamentId,
+            matchSettings.tournamentMatchId,
+            outcome.winner,
+            outcome.summary
+          );
+        }
+      }
     }
   }, [currentMatchId, screen, inningsList, currentInningsIndex, strikerName, nonStrikerName, bowlerName, stumpsStatus, history, matchSettings, toss]);
 
@@ -266,21 +298,51 @@ export default function App() {
 
   // 3. Lineup setup completed
   const handleStartGame = (lineup) => {
-    setStrikerName(lineup.striker);
-    setNonStrikerName(lineup.nonStriker);
-    setBowlerName(lineup.bowler);
+    const sName = (lineup?.striker || '').trim();
+    const nsName = (lineup?.nonStriker || '').trim();
+    const bName = (lineup?.bowler || '').trim();
+
+    setStrikerName(sName);
+    setNonStrikerName(nsName);
+    setBowlerName(bName);
     
     setInningsList(prev => {
       const copy = cloneState(prev);
+      const isTest = matchSettings?.format === 'test';
+      const targetCount = isTest ? 4 : 2;
+
+      // Ensure array length
+      while (copy.length < targetCount) {
+        const batting = copy.length % 2 === 0
+          ? (toss?.battingFirst || matchSettings?.team1 || 'Team 1')
+          : (toss?.bowlingFirst || matchSettings?.team2 || 'Team 2');
+        const bowling = copy.length % 2 === 0
+          ? (toss?.bowlingFirst || matchSettings?.team2 || 'Team 2')
+          : (toss?.battingFirst || matchSettings?.team1 || 'Team 1');
+        copy.push(createInnings(batting, bowling));
+      }
+
+      copy[currentInningsIndex] = ensureInningsShape(
+        copy[currentInningsIndex],
+        copy[currentInningsIndex]?.team || (currentInningsIndex % 2 === 0 ? toss?.battingFirst : toss?.bowlingFirst),
+        copy[currentInningsIndex]?.bowlingTeam || (currentInningsIndex % 2 === 0 ? toss?.bowlingFirst : toss?.battingFirst)
+      );
+
       const cur = copy[currentInningsIndex];
-      if (!cur.batsmen[lineup.striker]) {
-        cur.batsmen[lineup.striker] = { runs: 0, balls: 0, fours: 0, sixes: 0, out: false };
+      cur.batsmen = cur.batsmen || {};
+      cur.bowlers = cur.bowlers || {};
+      cur.extras = cur.extras || { wide: 0, noBall: 0, bye: 0, legBye: 0 };
+      cur.fallOfWickets = cur.fallOfWickets || [];
+      cur.overHistory = cur.overHistory || [];
+
+      if (!cur.batsmen[sName]) {
+        cur.batsmen[sName] = { runs: 0, balls: 0, fours: 0, sixes: 0, out: false };
       }
-      if (!cur.batsmen[lineup.nonStriker]) {
-        cur.batsmen[lineup.nonStriker] = { runs: 0, balls: 0, fours: 0, sixes: 0, out: false };
+      if (!cur.batsmen[nsName]) {
+        cur.batsmen[nsName] = { runs: 0, balls: 0, fours: 0, sixes: 0, out: false };
       }
-      if (!cur.bowlers[lineup.bowler]) {
-        cur.bowlers[lineup.bowler] = { balls: 0, maidens: 0, runs: 0, wickets: 0 };
+      if (!cur.bowlers[bName]) {
+        cur.bowlers[bName] = { balls: 0, maidens: 0, runs: 0, wickets: 0 };
       }
       return copy;
     });
@@ -540,9 +602,17 @@ export default function App() {
 
       if (allOut || declared) {
         if (index === 0) {
+          if (!updatedInningsList[1]) {
+            updatedInningsList[1] = createInnings(team2Name, team1Name);
+          } else {
+            updatedInningsList[1] = ensureInningsShape(updatedInningsList[1], team2Name, team1Name);
+          }
           setCurrentInningsIndex(1);
           setInningsList(updatedInningsList);
-          setScreen('STRIKER_SETUP');
+          setStrikerName('');
+          setNonStrikerName('');
+          setBowlerName('');
+          navigateTo('scorecard', 'STRIKER_SETUP');
           return;
         }
         
@@ -555,22 +625,35 @@ export default function App() {
               `Follow-on option: ${team1Name} leads by ${teamAScore1 - teamBScore1} runs. Enforce follow-on on ${team2Name}?`
             );
             if (wantFollowOn) {
+              updatedInningsList[2] = ensureInningsShape(updatedInningsList[2], team2Name, team1Name);
               updatedInningsList[2].team = team2Name;
               updatedInningsList[2].bowlingTeam = team1Name;
               
+              updatedInningsList[3] = ensureInningsShape(updatedInningsList[3], team1Name, team2Name);
               updatedInningsList[3].team = team1Name;
               updatedInningsList[3].bowlingTeam = team2Name;
               
               setCurrentInningsIndex(2);
               setInningsList(updatedInningsList);
-              setScreen('STRIKER_SETUP');
+              setStrikerName('');
+              setNonStrikerName('');
+              setBowlerName('');
+              navigateTo('scorecard', 'STRIKER_SETUP');
               return;
             }
           }
           
+          if (!updatedInningsList[2]) {
+            updatedInningsList[2] = createInnings(team1Name, team2Name);
+          } else {
+            updatedInningsList[2] = ensureInningsShape(updatedInningsList[2], team1Name, team2Name);
+          }
           setCurrentInningsIndex(2);
           setInningsList(updatedInningsList);
-          setScreen('STRIKER_SETUP');
+          setStrikerName('');
+          setNonStrikerName('');
+          setBowlerName('');
+          navigateTo('scorecard', 'STRIKER_SETUP');
           return;
         }
 
@@ -584,27 +667,37 @@ export default function App() {
             const teamBTotal = teamBScore1 + runs3;
             if (teamBTotal < teamAScore1) {
               setInningsList(updatedInningsList);
-              setScreen('SUMMARY');
+              navigateTo('scorecard', 'SUMMARY');
               return;
             }
           } else {
             const teamATotal = teamAScore1 + runs3;
             if (teamATotal < teamBScore1) {
               setInningsList(updatedInningsList);
-              setScreen('SUMMARY');
+              navigateTo('scorecard', 'SUMMARY');
               return;
             }
           }
 
+          const fourthBatting = isFollowOn ? team1Name : team2Name;
+          const fourthBowling = isFollowOn ? team2Name : team1Name;
+          if (!updatedInningsList[3]) {
+            updatedInningsList[3] = createInnings(fourthBatting, fourthBowling);
+          } else {
+            updatedInningsList[3] = ensureInningsShape(updatedInningsList[3], fourthBatting, fourthBowling);
+          }
           setCurrentInningsIndex(3);
           setInningsList(updatedInningsList);
-          setScreen('STRIKER_SETUP');
+          setStrikerName('');
+          setNonStrikerName('');
+          setBowlerName('');
+          navigateTo('scorecard', 'STRIKER_SETUP');
           return;
         }
 
         if (index === 3) {
           setInningsList(updatedInningsList);
-          setScreen('SUMMARY');
+          navigateTo('scorecard', 'SUMMARY');
           return;
         }
       }
@@ -622,10 +715,10 @@ export default function App() {
 
         if (curInnings.team === team2Name && team2Total > team1Total) {
           setInningsList(updatedInningsList);
-          setScreen('SUMMARY');
+          navigateTo('scorecard', 'SUMMARY');
         } else if (curInnings.team === team1Name && team1Total > team2Total) {
           setInningsList(updatedInningsList);
-          setScreen('SUMMARY');
+          navigateTo('scorecard', 'SUMMARY');
         }
       }
 
@@ -635,18 +728,28 @@ export default function App() {
 
       if (index === 0) {
         if (allOut || oversCompleted) {
+          const nextBatting = team2Name || toss?.bowlingFirst || matchSettings?.team2 || 'Team 2';
+          const nextBowling = team1Name || toss?.battingFirst || matchSettings?.team1 || 'Team 1';
+          if (!updatedInningsList[1]) {
+            updatedInningsList[1] = createInnings(nextBatting, nextBowling);
+          } else {
+            updatedInningsList[1] = ensureInningsShape(updatedInningsList[1], nextBatting, nextBowling);
+          }
           setCurrentInningsIndex(1);
           setInningsList(updatedInningsList);
-          setScreen('STRIKER_SETUP');
+          setStrikerName('');
+          setNonStrikerName('');
+          setBowlerName('');
+          navigateTo('scorecard', 'STRIKER_SETUP');
         }
       } else if (index === 1) {
         const target = updatedInningsList[0].runs + 1;
         if (curInnings.runs >= target) {
           setInningsList(updatedInningsList);
-          setScreen('SUMMARY');
+          navigateTo('scorecard', 'SUMMARY');
         } else if (allOut || oversCompleted) {
           setInningsList(updatedInningsList);
-          setScreen('SUMMARY');
+          navigateTo('scorecard', 'SUMMARY');
         }
       }
     }
@@ -669,17 +772,66 @@ export default function App() {
 
   // Continue a match from History Screen or Incomplete Matches
   const handleContinueMatch = (match) => {
+    if (!match) return;
+
+    const isTest = match.matchSettings?.format === 'test';
+    const totalInningsCount = isTest ? 4 : 2;
+    const rawList = Array.isArray(match.inningsList) ? match.inningsList : [];
+    
+    // Normalize every innings in inningsList
+    const sanitizedList = rawList.map((inn, idx) => {
+      const defaultBatting = idx % 2 === 0
+        ? (match.toss?.battingFirst || match.matchSettings?.team1 || 'Team 1')
+        : (match.toss?.bowlingFirst || match.matchSettings?.team2 || 'Team 2');
+      const defaultBowling = idx % 2 === 0
+        ? (match.toss?.bowlingFirst || match.matchSettings?.team2 || 'Team 2')
+        : (match.toss?.battingFirst || match.matchSettings?.team1 || 'Team 1');
+      return ensureInningsShape(inn, defaultBatting, defaultBowling);
+    });
+
+    while (sanitizedList.length < totalInningsCount) {
+      const idx = sanitizedList.length;
+      const defaultBatting = idx % 2 === 0
+        ? (match.toss?.battingFirst || match.matchSettings?.team1 || 'Team 1')
+        : (match.toss?.bowlingFirst || match.matchSettings?.team2 || 'Team 2');
+      const defaultBowling = idx % 2 === 0
+        ? (match.toss?.bowlingFirst || match.matchSettings?.team2 || 'Team 2')
+        : (match.toss?.battingFirst || match.matchSettings?.team1 || 'Team 1');
+      sanitizedList.push(createInnings(defaultBatting, defaultBowling));
+    }
+
+    let targetIndex = Number(match.currentInningsIndex) || 0;
+    if (targetIndex >= sanitizedList.length) targetIndex = sanitizedList.length - 1;
+
+    let targetScreen = match.screen || 'GAME';
+    if (match.status === 'Completed' || targetScreen === 'SUMMARY') {
+      targetScreen = 'SUMMARY';
+    } else {
+      // Check if current innings was finished and needed striker setup
+      const cur = sanitizedList[targetIndex];
+      const maxBalls = match.matchSettings?.overs ? match.matchSettings.overs * 6 : Infinity;
+      const isCurFinished = cur.wickets >= 10 || cur.allOutForce || cur.declared || (match.matchSettings?.format === 'limited' && cur.balls >= maxBalls);
+
+      if (isCurFinished && targetIndex === 0) {
+        // Automatically advance to innings 1
+        targetIndex = 1;
+        targetScreen = 'STRIKER_SETUP';
+      } else if (isCurFinished && targetIndex === 1 && match.matchSettings?.format === 'limited') {
+        targetScreen = 'SUMMARY';
+      }
+    }
+
     setCurrentMatchId(match.id);
     setMatchSettings(match.matchSettings);
     setToss(match.toss);
-    setInningsList(match.inningsList);
-    setCurrentInningsIndex(match.currentInningsIndex);
-    setStrikerName(match.strikerName);
-    setNonStrikerName(match.nonStrikerName);
-    setBowlerName(match.bowlerName);
+    setInningsList(sanitizedList);
+    setCurrentInningsIndex(targetIndex);
+    setStrikerName(targetScreen === 'STRIKER_SETUP' ? '' : (match.strikerName || ''));
+    setNonStrikerName(targetScreen === 'STRIKER_SETUP' ? '' : (match.nonStrikerName || ''));
+    setBowlerName(targetScreen === 'STRIKER_SETUP' ? '' : (match.bowlerName || ''));
     setStumpsStatus(match.stumpsStatus || null);
     setHistory(match.history || []);
-    navigateTo('scorecard', match.screen === 'SUMMARY' ? 'SUMMARY' : (match.screen || 'GAME'));
+    navigateTo('scorecard', targetScreen);
   };
 
   // View Scorecard of a match
@@ -733,19 +885,6 @@ export default function App() {
           <span className="app-brand-ball" aria-hidden="true" />
           <span>Gully Cricket</span>
         </div>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={() => setTheme((currentTheme) => currentTheme === 'dark' ? 'light' : 'dark')}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-        >
-          <Sun className="theme-icon theme-icon-sun" size={17} aria-hidden="true" />
-          <span className="theme-toggle-track" aria-hidden="true">
-            <span className="theme-toggle-thumb" />
-          </span>
-          <Moon className="theme-icon theme-icon-moon" size={16} aria-hidden="true" />
-        </button>
       </header>
 
       {/* Scrollable content area: every screen shares exact same width & padding */}
@@ -761,8 +900,8 @@ export default function App() {
             
             {screen === 'TOSS' && (
               <TossScreen 
-                team1={matchSettings.team1} 
-                team2={matchSettings.team2} 
+                team1={matchSettings?.team1} 
+                team2={matchSettings?.team2} 
                 onTossComplete={handleTossComplete}
                 onBack={handleBackNavigation}
               />
@@ -770,8 +909,8 @@ export default function App() {
             
             {screen === 'STRIKER_SETUP' && (
               <StrikerSetupScreen 
-                battingTeam={inningsList[currentInningsIndex].team} 
-                bowlingTeam={inningsList[currentInningsIndex].bowlingTeam} 
+                battingTeam={inningsList[currentInningsIndex]?.team || (currentInningsIndex % 2 === 0 ? (toss?.battingFirst || matchSettings?.team1) : (toss?.bowlingFirst || matchSettings?.team2))} 
+                bowlingTeam={inningsList[currentInningsIndex]?.bowlingTeam || (currentInningsIndex % 2 === 0 ? (toss?.bowlingFirst || matchSettings?.team2) : (toss?.battingFirst || matchSettings?.team1))} 
                 chaseTarget={chaseTarget}
                 onStartGame={handleStartGame}
                 onBack={handleBackNavigation}

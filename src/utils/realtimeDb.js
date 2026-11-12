@@ -238,3 +238,33 @@ export const saveTournamentData = (data) => {
   void writeRemote('tournament', data);
   return data;
 };
+
+export const updateTournamentMatchResult = (tournamentId, tournamentMatchId, winner, resultSummary) => {
+  const store = getTournamentData(null);
+  if (!store || !Array.isArray(store.tournaments)) return;
+
+  const updatedTournaments = store.tournaments.map((tournament) => {
+    if (tournament.id === tournamentId) {
+      const updatedMatches = (tournament.matches || []).map((m) => {
+        if (String(m.id) === String(tournamentMatchId)) {
+          return {
+            ...m,
+            winner,
+            resultSummary: resultSummary || m.resultSummary || (
+              winner === 'team1' ? `${tournament.teams?.team1?.name || 'Team 1'} won`
+                : winner === 'team2' ? `${tournament.teams?.team2?.name || 'Team 2'} won`
+                  : 'Match Tied'
+            ),
+          };
+        }
+        return m;
+      });
+      return { ...tournament, matches: updatedMatches };
+    }
+    return tournament;
+  });
+
+  const nextStore = { ...store, tournaments: updatedTournaments };
+  saveTournamentData(nextStore);
+  return nextStore;
+};

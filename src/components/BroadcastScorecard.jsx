@@ -37,6 +37,12 @@ export default function BroadcastScorecard({
 
       {/* Main Broadcast Header Box */}
       <div className="broadcast-card">
+        {/* Top live badge bar matching pro mobile cricket broadcast */}
+        <div className="broadcast-live-row">
+          <span className="broadcast-live-badge">🔴 LIVE</span>
+          <span className="broadcast-corner-arrow" title="Live scorecard">↗</span>
+        </div>
+
         {/* ROW 1: TEAM CODE & SCORE */}
         <div className="broadcast-row primary-row">
           <div className="broadcast-team-code">

@@ -28,23 +28,14 @@ export default function SetupScreen({ onSetupComplete, onViewHistory }) {
     <div className="setup-screen-container" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1 }}>
       {/* Broadcast Header Badge */}
       <div style={{ textAlign: 'center', margin: '16px 0 14px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: 'rgba(0, 229, 255, 0.12)', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '20px', marginBottom: '8px' }}>
-          <Tv size={14} color="#00e5ff" />
-          <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#00e5ff', letterSpacing: '0.1em' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: 'var(--soft-surface)', border: '1px solid var(--divider)', borderRadius: '20px', marginBottom: '8px' }}>
+          <Tv size={14} color="var(--primary)" />
+          <span style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.1em' }}>
             LIVE TV BROADCAST STUDIO
           </span>
         </div>
 
-        <h1 style={{ 
-          fontSize: '2rem', 
-          fontWeight: '800', 
-          textTransform: 'uppercase', 
-          letterSpacing: '0.04em', 
-          background: 'linear-gradient(135deg, #ffffff 0%, #00e5ff 60%, #00ff88 100%)', 
-          WebkitBackgroundClip: 'text', 
-          WebkitTextFillColor: 'transparent',
-          filter: 'drop-shadow(0 0 15px rgba(0, 229, 255, 0.3))'
-        }}>
+        <h1 className="setup-brand-title">
           GULLY CRICKET
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '2px', fontWeight: '500' }}>
@@ -55,8 +46,8 @@ export default function SetupScreen({ onSetupComplete, onViewHistory }) {
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '14px' }}>
         {/* Team Setup Card */}
         <div className="card broadcast-input-card">
-          <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', color: '#00e5ff' }}>
-            <Users size={16} color="#00e5ff" /> Team Registration
+          <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', color: 'var(--primary)' }}>
+            <Users size={16} color="var(--primary)" /> Team Registration
           </h3>
           
           <div className="form-group" style={{ marginBottom: '12px' }}>
@@ -88,8 +79,8 @@ export default function SetupScreen({ onSetupComplete, onViewHistory }) {
 
         {/* Match Format Card */}
         <div className="card broadcast-input-card">
-          <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', color: '#00ff88' }}>
-            <Award size={16} color="#00ff88" /> Match Format
+          <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', color: 'var(--secondary)' }}>
+            <Award size={16} color="var(--secondary)" /> Match Format
           </h3>
           
           <div className="format-grid" style={{ marginBottom: '12px' }}>
@@ -97,7 +88,7 @@ export default function SetupScreen({ onSetupComplete, onViewHistory }) {
               className={`format-card ${format === 'limited' ? 'selected' : ''}`}
               onClick={() => setFormat('limited')}
             >
-              <h4 style={{ color: format === 'limited' ? '#00e5ff' : 'var(--text-primary)' }}>Limited Overs</h4>
+              <h4 style={{ color: format === 'limited' ? 'var(--primary)' : 'var(--text-primary)' }}>Limited Overs</h4>
               <p>Standard overs limit (e.g. 5, 10, 20 overs)</p>
             </div>
             
@@ -105,14 +96,14 @@ export default function SetupScreen({ onSetupComplete, onViewHistory }) {
               className={`format-card ${format === 'test' ? 'selected' : ''}`}
               onClick={() => setFormat('test')}
             >
-              <h4 style={{ color: format === 'test' ? '#00e5ff' : 'var(--text-primary)' }}>Test Format</h4>
+              <h4 style={{ color: format === 'test' ? 'var(--primary)' : 'var(--text-primary)' }}>Test Format</h4>
               <p>2 Innings per team, declare & Day Stumps</p>
             </div>
           </div>
 
           {format === 'limited' ? (
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Overs Count: <span style={{ color: '#00e5ff', fontWeight: 'bold', fontSize: '1.05rem' }}>{overs}</span></label>
+              <label className="form-label">Overs Count: <span style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.05rem' }}>{overs}</span></label>
               <input 
                 type="range" 
                 min="1" 

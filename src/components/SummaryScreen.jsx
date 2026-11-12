@@ -121,10 +121,11 @@ export default function SummaryScreen({
   };
 
   const renderInningsDetails = (innings, index) => {
-    const batsmen = Object.entries(innings.batsmen);
-    const bowlers = Object.entries(innings.bowlers);
-    const totalBalls = innings.balls;
+    const batsmen = Object.entries(innings?.batsmen || {});
+    const bowlers = Object.entries(innings?.bowlers || {});
+    const totalBalls = innings?.balls || 0;
     const oversStr = `${Math.floor(totalBalls / 6)}.${totalBalls % 6}`;
+    const extras = innings?.extras || { wide: 0, noBall: 0, bye: 0, legBye: 0 };
 
     return (
       <div key={index} style={{ animation: 'pop-in 0.3s ease' }}>
@@ -198,9 +199,9 @@ export default function SummaryScreen({
 
         {/* Extras Row */}
         <div className="extras-row">
-          <span>Extras: <strong>{innings.extras.wide + innings.extras.noBall + innings.extras.bye + innings.extras.legBye}</strong></span>
+          <span>Extras: <strong>{(extras.wide || 0) + (extras.noBall || 0) + (extras.bye || 0) + (extras.legBye || 0)}</strong></span>
           <span style={{ fontSize: '0.75rem' }}>
-            Wd: {innings.extras.wide} | Nb: {innings.extras.noBall} | B: {innings.extras.bye} | Lb: {innings.extras.legBye}
+            Wd: {extras.wide || 0} | Nb: {extras.noBall || 0} | B: {extras.bye || 0} | Lb: {extras.legBye || 0}
           </span>
         </div>
 

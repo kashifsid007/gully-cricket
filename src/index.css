@@ -39,32 +39,122 @@
 }
 
 :root[data-theme="light"] {
-  --bg-color: #dfe7eb;
-  --bg-gradient: linear-gradient(135deg, #d7e1e6 0%, #eef3f5 50%, #cbd8de 100%);
-  --app-bg: linear-gradient(180deg, #f8fafc 0%, #eef3f6 55%, #f7f9fa 100%);
-  --card-bg: linear-gradient(145deg, #ffffff 0%, #f7fafb 100%);
-  --toolbar-bg: rgba(248, 251, 255, 0.96);
-  --nav-bg: rgba(255, 255, 255, 0.97);
-  --field-bg: rgba(255, 255, 255, 0.96);
-  --soft-surface: rgba(22, 74, 91, 0.06);
+  --bg-color: #e2e8f0;
+  --bg-gradient: linear-gradient(135deg, #cbd5e1 0%, #f1f5f9 50%, #cbd5e1 100%);
+  --app-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
+  --card-bg: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  --toolbar-bg: rgba(255, 255, 255, 0.96);
+  --nav-bg: rgba(255, 255, 255, 0.98);
+  --field-bg: #ffffff;
+  --soft-surface: rgba(15, 23, 42, 0.05);
   --surface-solid: #ffffff;
-  --divider: rgba(15, 54, 67, 0.12);
-  --card-border: rgba(46, 93, 110, 0.22);
+  --divider: rgba(15, 23, 42, 0.12);
+  --card-border: rgba(15, 23, 42, 0.14);
   --primary: #08798a;
-  --primary-glow: rgba(8, 121, 138, 0.18);
-  --secondary: #147a5a;
-  --secondary-glow: rgba(8, 126, 91, 0.2);
-  --accent: #c51643;
-  --text-primary: #173042;
-  --text-secondary: #456477;
-  --text-muted: #6a8491;
-  --success: #087e5b;
-  --error: #d31946;
-  --warning: #8a6a00;
-  --overlay-bg: rgba(226, 239, 236, 0.88);
-  --shadow-sm: 0 2px 8px rgba(20, 58, 69, 0.1);
-  --shadow-md: 0 8px 24px rgba(20, 58, 69, 0.14);
-  --shadow-lg: 0 16px 40px rgba(20, 58, 69, 0.2);
+  --primary-glow: rgba(8, 121, 138, 0.2);
+  --secondary: #0d845e;
+  --secondary-glow: rgba(13, 132, 94, 0.2);
+  --accent: #e11d48;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --success: #0d845e;
+  --error: #e11d48;
+  --warning: #b45309;
+  --overlay-bg: rgba(15, 23, 42, 0.6);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+:root[data-theme="green"] {
+  --bg-color: #0c2b18;
+  --bg-gradient: linear-gradient(135deg, #0a2113 0%, #154226 50%, #07170c 100%);
+  --app-bg: linear-gradient(180deg, #0d2818 0%, #143822 55%, #0a1f13 100%);
+  --card-bg: linear-gradient(145deg, rgba(20, 52, 34, 0.94) 0%, rgba(12, 35, 22, 0.96) 100%);
+  --toolbar-bg: rgba(13, 40, 24, 0.96);
+  --nav-bg: rgba(10, 31, 19, 0.98);
+  --field-bg: rgba(18, 48, 30, 0.9);
+  --soft-surface: rgba(255, 255, 255, 0.07);
+  --surface-solid: #0d2818;
+  --divider: rgba(255, 255, 255, 0.12);
+  --card-border: rgba(34, 197, 94, 0.4);
+  --primary: #22c55e;
+  --primary-glow: rgba(34, 197, 94, 0.35);
+  --secondary: #f59e0b;
+  --secondary-glow: rgba(245, 158, 11, 0.35);
+  --accent: #f43f5e;
+  --text-primary: #f0fdf4;
+  --text-secondary: #86efac;
+  --text-muted: #4ade80;
+  --success: #22c55e;
+  --error: #f43f5e;
+  --warning: #f59e0b;
+  --overlay-bg: rgba(7, 23, 12, 0.92);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+
+:root[data-theme="crimson"] {
+  --bg-color: #26040d;
+  --bg-gradient: linear-gradient(135deg, #1f020a 0%, #3d0718 50%, #150207 100%);
+  --app-bg: linear-gradient(180deg, #2b0410 0%, #3d0718 55%, #1f020a 100%);
+  --card-bg: linear-gradient(145deg, rgba(61, 7, 24, 0.94) 0%, rgba(38, 4, 15, 0.96) 100%);
+  --toolbar-bg: rgba(43, 4, 16, 0.96);
+  --nav-bg: rgba(31, 2, 10, 0.98);
+  --field-bg: rgba(54, 6, 22, 0.9);
+  --soft-surface: rgba(255, 255, 255, 0.07);
+  --surface-solid: #2b0410;
+  --divider: rgba(255, 255, 255, 0.12);
+  --card-border: rgba(251, 113, 133, 0.4);
+  --primary: #fb7185;
+  --primary-glow: rgba(251, 113, 133, 0.35);
+  --secondary: #fbbf24;
+  --secondary-glow: rgba(251, 191, 36, 0.35);
+  --accent: #38bdf8;
+  --text-primary: #fff1f2;
+  --text-secondary: #fecdd3;
+  --text-muted: #fda4af;
+  --success: #34d399;
+  --error: #f43f5e;
+  --warning: #fbbf24;
+  --overlay-bg: rgba(26, 2, 9, 0.92);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+
+:root[data-theme="sky"] {
+  --bg-color: #0c0f17;
+  --bg-gradient: linear-gradient(135deg, #090c13 0%, #131722 50%, #0a0d14 100%);
+  --app-bg: linear-gradient(180deg, #121622 0%, #151a28 55%, #0f131d 100%);
+  --card-bg: linear-gradient(145deg, #1b2030 0%, #171b29 100%);
+  --toolbar-bg: rgba(18, 22, 34, 0.96);
+  --nav-bg: rgba(16, 20, 30, 0.97);
+  --field-bg: #141824;
+  --soft-surface: rgba(94, 200, 248, 0.08);
+  --surface-solid: #1b2030;
+  --divider: rgba(255, 255, 255, 0.08);
+  --card-border: rgba(94, 200, 248, 0.16);
+  --primary: #5ec8f8;
+  --primary-glow: rgba(94, 200, 248, 0.35);
+  --secondary: #38bdf8;
+  --secondary-glow: rgba(56, 189, 248, 0.3);
+  --accent: #ff4766;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --success: #10b981;
+  --error: #ff4766;
+  --warning: #fbbf24;
+  --overlay-bg: rgba(10, 13, 20, 0.92);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.7);
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
 }
 
 * {
@@ -274,6 +364,26 @@ h1, h2, h3, h4 {
   font-family: var(--font-title);
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.setup-brand-title {
+  font-size: 2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #ffffff 0%, var(--primary) 60%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.3));
+}
+
+:root[data-theme="light"] .setup-brand-title {
+  background: linear-gradient(135deg, #0f172a 0%, var(--primary) 60%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: none;
 }
 
 /* Utility Card Styling - TV Broadcast Glassmorphism */
@@ -1206,6 +1316,48 @@ h1, h2, h3, h4 {
   z-index: 2;
 }
 
+.broadcast-live-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+  position: relative;
+  z-index: 3;
+}
+
+.broadcast-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ff3b5c;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(255, 59, 92, 0.45);
+}
+
+.broadcast-corner-arrow {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.broadcast-corner-arrow:hover {
+  transform: scale(1.1);
+}
+
 .broadcast-row {
   display: flex;
   justify-content: space-between;
@@ -1471,7 +1623,7 @@ h1, h2, h3, h4 {
 .player-directory-name {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1483,6 +1635,10 @@ h1, h2, h3, h4 {
   font-size: 0.72rem;
   color: var(--text-secondary);
   margin-top: 2px;
+}
+
+.player-directory-stats strong {
+  color: var(--text-primary);
 }
 
 .player-stats-card {
@@ -2656,7 +2812,7 @@ h1, h2, h3, h4 {
 }
 
 .btn-text-edit:hover {
-  color: #ffffff;
+  color: var(--primary);
 }
 
 .edit-score-box {
@@ -3323,12 +3479,26 @@ h1, h2, h3, h4 {
 :root[data-theme="light"] .section-title,
 :root[data-theme="light"] .status-text,
 :root[data-theme="light"] .player-name-text,
+:root[data-theme="light"] .player-directory-name,
+:root[data-theme="light"] .player-directory-stats strong,
 :root[data-theme="light"] .fixture-main-title,
 :root[data-theme="light"] .info-chip strong,
 :root[data-theme="light"] .rule-title,
 :root[data-theme="light"] .tournament-leader-card strong,
 :root[data-theme="light"] .innings-target-score {
   color: var(--text-primary);
+}
+
+:root[data-theme="light"] .tournament-stat-list {
+  border-top-color: var(--divider);
+}
+
+:root[data-theme="light"] .tournament-stat-list strong {
+  color: var(--primary);
+}
+
+:root[data-theme="light"] .tournament-stat-list > div {
+  color: var(--text-secondary);
 }
 
 :root[data-theme="light"] .series-big-score,
@@ -3379,6 +3549,821 @@ h1, h2, h3, h4 {
 
 :root[data-theme="light"] .sync-status-pill.online > span {
   box-shadow: 0 0 6px rgba(17, 119, 82, 0.35);
+}
+
+/* Light theme broadcast cards & text overrides */
+:root[data-theme="light"] .broadcast-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%) !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-theme="light"] .team-code-text,
+:root[data-theme="light"] .broadcast-score-value,
+:root[data-theme="light"] .broadcast-value {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+:root[data-theme="light"] .broadcast-label {
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .broadcast-runrate-label,
+:root[data-theme="light"] .broadcast-runrate-value {
+  color: #08798a !important;
+  text-shadow: none !important;
+}
+
+:root[data-theme="light"] .primary-row {
+  border-bottom-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+:root[data-theme="light"] .broadcast-target-bar {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(8, 121, 138, 0.08)) !important;
+  border-color: rgba(202, 138, 4, 0.4) !important;
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .broadcast-target-heading {
+  color: #854d0e !important;
+}
+
+:root[data-theme="light"] .broadcast-target-message {
+  color: #334155 !important;
+}
+
+:root[data-theme="light"] .broadcast-accent-stripe-top,
+:root[data-theme="light"] .broadcast-accent-stripe-bottom {
+  opacity: 0.25 !important;
+}
+
+/* Light theme player banner */
+:root[data-theme="light"] .tv-player-banner-container {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-theme="light"] .tv-player-cell {
+  border-right-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+:root[data-theme="light"] .tv-player-name,
+:root[data-theme="light"] .tv-player-score-main {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .tv-balls-faced {
+  color: #64748b !important;
+}
+
+:root[data-theme="light"] .tv-popout-avatar {
+  background: #ffffff !important;
+}
+
+/* Light theme striker setup & chips */
+:root[data-theme="light"] .lineup-team-card {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+:root[data-theme="light"] .squad-chip {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+:root[data-theme="light"] .chip-name {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .squad-chip.active-striker {
+  background: #ecfeff !important;
+  border-color: #08798a !important;
+  color: #08798a !important;
+}
+
+:root[data-theme="light"] .squad-chip.active-striker .chip-name {
+  color: #08798a !important;
+}
+
+:root[data-theme="light"] .squad-chip.active-nonstriker {
+  background: #f0fdf4 !important;
+  border-color: #0d845e !important;
+  color: #0d845e !important;
+}
+
+:root[data-theme="light"] .squad-chip.active-nonstriker .chip-name {
+  color: #0d845e !important;
+}
+
+:root[data-theme="light"] .squad-chip.active-bowler {
+  background: #fff1f2 !important;
+  border-color: #e11d48 !important;
+  color: #e11d48 !important;
+}
+
+:root[data-theme="light"] .squad-chip.active-bowler .chip-name {
+  color: #e11d48 !important;
+}
+
+:root[data-theme="light"] .btn-custom-toggle,
+:root[data-theme="light"] .btn-swap-lineup {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+:root[data-theme="light"] .form-input,
+:root[data-theme="light"] .form-select {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+:root[data-theme="light"] .form-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="light"] option {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .scorecard-table th {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+:root[data-theme="light"] .scorecard-table td {
+  color: #0f172a !important;
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-theme="light"] .modal {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2) !important;
+}
+
+:root[data-theme="light"] .modal-title {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .over-balls-label {
+  color: #475569 !important;
+}
+
+:root[data-theme="light"] .ball-bubble {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .format-card {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .format-card p {
+  color: #64748b !important;
+}
+
+:root[data-theme="light"] .format-card.selected {
+  background: #f0fdfa !important;
+  border-color: #08798a !important;
+}
+
+:root[data-theme="light"] .history-card h3,
+:root[data-theme="light"] .match-card h3 {
+  color: #0f172a !important;
+}
+
+/* GREEN / STADIUM PITCH THEME ------------------------------------ */
+:root[data-theme="green"] .app-container {
+  border-color: rgba(34, 197, 94, 0.35);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(34, 197, 94, 0.2);
+}
+
+:root[data-theme="green"] .broadcast-card {
+  background: linear-gradient(135deg, rgba(13, 40, 24, 0.94) 0%, rgba(20, 52, 34, 0.94) 60%, rgba(35, 25, 8, 0.9) 100%);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+:root[data-theme="green"] .tv-player-banner-container {
+  background: linear-gradient(135deg, #0d2818 0%, #153c23 50%, #0a1f13 100%);
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+:root[data-theme="green"] .btn-primary {
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.4);
+}
+
+:root[data-theme="green"] .btn-primary:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #166534 100%);
+}
+
+/* CRIMSON / ROYAL IPL THEME ------------------------------------ */
+:root[data-theme="crimson"] .app-container {
+  border-color: rgba(251, 113, 133, 0.35);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(251, 113, 133, 0.2);
+}
+
+:root[data-theme="crimson"] .broadcast-card {
+  background: linear-gradient(135deg, rgba(43, 4, 16, 0.94) 0%, rgba(61, 7, 24, 0.94) 60%, rgba(30, 8, 20, 0.9) 100%);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+:root[data-theme="crimson"] .tv-player-banner-container {
+  background: linear-gradient(135deg, #2b0410 0%, #3d0718 50%, #1f020a 100%);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+:root[data-theme="crimson"] .btn-primary {
+  background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+  box-shadow: 0 4px 18px rgba(244, 63, 94, 0.4);
+}
+
+:root[data-theme="crimson"] .btn-primary:hover {
+  background: linear-gradient(135deg, #fb7185 0%, #9f1239 100%);
+}
+
+/* SKY PRO (CRICUI) THEME ------------------------------------ */
+:root[data-theme="sky"] .app-container {
+  background: var(--app-bg);
+  border-color: rgba(94, 200, 248, 0.22);
+  box-shadow: 0 0 55px rgba(0, 0, 0, 0.9), 0 0 25px rgba(94, 200, 248, 0.14);
+}
+
+:root[data-theme="sky"] .app-toolbar {
+  background: rgba(18, 22, 34, 0.96);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Signature Hero Broadcast Live Scorecard */
+:root[data-theme="sky"] .broadcast-card {
+  background: linear-gradient(135deg, #60cbf9 0%, #4db4f2 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+  color: #091120 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 14px 40px rgba(77, 180, 242, 0.3) !important;
+}
+
+:root[data-theme="sky"] .broadcast-card .primary-row {
+  border-bottom: 1px solid rgba(9, 17, 32, 0.15) !important;
+}
+
+:root[data-theme="sky"] .broadcast-card .team-code-text,
+:root[data-theme="sky"] .broadcast-card .broadcast-score-value,
+:root[data-theme="sky"] .broadcast-card .broadcast-value,
+:root[data-theme="sky"] .broadcast-card .broadcast-runrate-value {
+  color: #091120 !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+:root[data-theme="sky"] .broadcast-card .broadcast-label {
+  color: #1e293b !important;
+  font-weight: 750 !important;
+}
+
+:root[data-theme="sky"] .broadcast-card .broadcast-runrate-label {
+  color: #0f172a !important;
+  font-weight: 850 !important;
+}
+
+:root[data-theme="sky"] .broadcast-card .broadcast-corner-arrow {
+  background: rgba(9, 17, 32, 0.14) !important;
+  color: #091120 !important;
+}
+
+:root[data-theme="sky"] .broadcast-target-bar {
+  background: #171c2b !important;
+  border: 1.5px solid rgba(94, 200, 248, 0.35) !important;
+  border-top: none !important;
+  border-radius: 0 0 20px 20px !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .broadcast-target-heading {
+  color: #5ec8f8 !important;
+  font-weight: 900 !important;
+}
+
+/* TV Player Banner */
+:root[data-theme="sky"] .tv-player-banner-container {
+  background: #161b29 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+:root[data-theme="sky"] .tv-avatar-initials {
+  background: linear-gradient(135deg, #60cbf9 0%, #38bdf8 100%) !important;
+  color: #091120 !important;
+  font-weight: 800 !important;
+}
+
+:root[data-theme="sky"] .tv-avatar-initials.bowler {
+  background: linear-gradient(135deg, #ff4766 0%, #e11d48 100%) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .tv-player-name {
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .tv-player-score-main {
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .tv-balls-faced {
+  color: #5ec8f8 !important;
+}
+
+/* Pill Tabs & Buttons */
+:root[data-theme="sky"] .tournament-section-tabs,
+:root[data-theme="sky"] .tabs-header {
+  background: #131724 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 9999px !important;
+  padding: 4px !important;
+}
+
+:root[data-theme="sky"] .tournament-section-tabs button,
+:root[data-theme="sky"] .tab-btn {
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="sky"] .tournament-section-tabs button.active,
+:root[data-theme="sky"] .tab-btn.active {
+  background: #5ec8f8 !important;
+  color: #091120 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 14px rgba(94, 200, 248, 0.35) !important;
+}
+
+:root[data-theme="sky"] .btn-primary {
+  background: linear-gradient(135deg, #60cbf9 0%, #38bdf8 100%) !important;
+  color: #091120 !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.32) !important;
+}
+
+:root[data-theme="sky"] .btn-primary:hover {
+  background: linear-gradient(135deg, #78d4fc 0%, #4db4f2 100%) !important;
+  box-shadow: 0 8px 28px rgba(56, 189, 248, 0.48) !important;
+}
+
+:root[data-theme="sky"] .btn-secondary {
+  background: #1b2030 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(94, 200, 248, 0.25) !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .btn-secondary:hover {
+  background: #23293e !important;
+  border-color: #5ec8f8 !important;
+}
+
+/* Floating Bottom Navbar */
+:root[data-theme="sky"] .bottom-navbar {
+  background: rgba(18, 22, 34, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 28px !important;
+  margin: 0 12px 12px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+  padding: 6px 8px !important;
+}
+
+:root[data-theme="sky"] .nav-item {
+  border-radius: 20px !important;
+  color: #8a96a8 !important;
+}
+
+:root[data-theme="sky"] .nav-item.active {
+  color: #5ec8f8 !important;
+  background: rgba(94, 200, 248, 0.12) !important;
+}
+
+:root[data-theme="sky"] .nav-item.active::before {
+  background: #5ec8f8 !important;
+  box-shadow: 0 0 10px #5ec8f8 !important;
+}
+
+/* Keypad & Scoring Buttons */
+:root[data-theme="sky"] .keypad-btn {
+  background: #181d2c !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .keypad-btn:hover {
+  border-color: #5ec8f8 !important;
+  background: #202638 !important;
+}
+
+:root[data-theme="sky"] .keypad-btn.run-4 {
+  background: rgba(94, 200, 248, 0.12) !important;
+  border-color: #5ec8f8 !important;
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .keypad-btn.run-6 {
+  background: linear-gradient(135deg, rgba(94, 200, 248, 0.25) 0%, rgba(56, 189, 248, 0.16) 100%) !important;
+  border-color: #5ec8f8 !important;
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .keypad-btn.wicket {
+  background: linear-gradient(135deg, rgba(255, 71, 102, 0.22) 0%, rgba(225, 29, 72, 0.14) 100%) !important;
+  border-color: #ff4766 !important;
+  color: #ff4766 !important;
+}
+
+/* Cards & Containers */
+:root[data-theme="sky"] .card {
+  background: linear-gradient(145deg, #1a1f2f 0%, #161a27 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+:root[data-theme="sky"] .card:hover {
+  border-color: rgba(94, 200, 248, 0.35) !important;
+}
+
+/* Tournament Tab - Sky Pro (CricUI) Theme */
+:root[data-theme="sky"] .tournament-header-banner {
+  background: linear-gradient(145deg, #171c2b 0%, #121622 100%) !important;
+  border: 1px solid rgba(94, 200, 248, 0.22) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35) !important;
+}
+
+:root[data-theme="sky"] .series-pill-badge {
+  background: rgba(94, 200, 248, 0.12) !important;
+  border: 1px solid rgba(94, 200, 248, 0.35) !important;
+  color: #5ec8f8 !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .tournament-main-title {
+  background: linear-gradient(135deg, #ffffff 0%, #5ec8f8 85%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+:root[data-theme="sky"] .tournament-sub-header {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+  filter: none !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+:root[data-theme="sky"] .tournament-caption {
+  color: #64748b !important;
+}
+
+:root[data-theme="sky"] .series-scoreboard-card {
+  background: #141824 !important;
+  border: 1px solid rgba(94, 200, 248, 0.22) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  padding: 14px 12px 10px !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .series-header-bar {
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .series-header-text {
+  color: #5ec8f8 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+}
+
+:root[data-theme="sky"] .series-team-box {
+  background: #1b2032 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  padding: 12px 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-theme="sky"] .series-team-box.leading {
+  border: 1.5px solid #5ec8f8 !important;
+  background: linear-gradient(145deg, #1f273b 0%, #171c2b 100%) !important;
+  box-shadow: 0 0 20px rgba(94, 200, 248, 0.25) !important;
+}
+
+:root[data-theme="sky"] .team-flag-pill {
+  border-radius: 9999px !important;
+  font-weight: 800 !important;
+  font-size: 0.7rem !important;
+  padding: 3px 10px !important;
+}
+
+:root[data-theme="sky"] .team-flag-pill.assasins {
+  background: rgba(94, 200, 248, 0.16) !important;
+  color: #5ec8f8 !important;
+  border: 1px solid rgba(94, 200, 248, 0.45) !important;
+}
+
+:root[data-theme="sky"] .team-flag-pill.battle {
+  background: rgba(255, 71, 102, 0.16) !important;
+  color: #ff6b85 !important;
+  border: 1px solid rgba(255, 71, 102, 0.45) !important;
+}
+
+:root[data-theme="sky"] .series-team-box .series-big-score {
+  color: #ffffff !important;
+  font-size: 2.5rem !important;
+  font-weight: 900 !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+:root[data-theme="sky"] .series-team-box.assasins .series-big-score {
+  color: #5ec8f8 !important;
+  text-shadow: 0 0 16px rgba(94, 200, 248, 0.35) !important;
+}
+
+:root[data-theme="sky"] .series-team-box.battle .series-big-score {
+  color: #ff6b85 !important;
+  text-shadow: 0 0 16px rgba(255, 71, 102, 0.35) !important;
+}
+
+:root[data-theme="sky"] .team-captain-sub {
+  color: #94a3b8 !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+}
+
+:root[data-theme="sky"] .vs-sign {
+  color: #5ec8f8 !important;
+  font-weight: 900 !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.1em !important;
+}
+
+:root[data-theme="sky"] .dash-sign {
+  color: rgba(255, 255, 255, 0.25) !important;
+  font-size: 1.3rem !important;
+}
+
+:root[data-theme="sky"] .series-status-pill {
+  background: #0f131f !important;
+  border: 1px solid rgba(94, 200, 248, 0.22) !important;
+  border-radius: 9999px !important;
+  padding: 7px 16px !important;
+}
+
+:root[data-theme="sky"] .series-status-pill .pulse-indicator {
+  background: #10b981 !important;
+  box-shadow: 0 0 10px #10b981 !important;
+}
+
+:root[data-theme="sky"] .series-status-pill .status-text {
+  color: #e2e8f0 !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+}
+
+:root[data-theme="sky"] .btn-reset-series {
+  color: #94a3b8 !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+:root[data-theme="sky"] .btn-reset-series:hover {
+  color: #ff4766 !important;
+  background: rgba(255, 71, 102, 0.12) !important;
+}
+
+:root[data-theme="sky"] .section-title {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+:root[data-theme="sky"] .sync-btn {
+  background: rgba(94, 200, 248, 0.12) !important;
+  border-color: rgba(94, 200, 248, 0.35) !important;
+  color: #5ec8f8 !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .sync-btn:hover {
+  background: rgba(94, 200, 248, 0.25) !important;
+}
+
+:root[data-theme="sky"] .squad-card,
+:root[data-theme="sky"] .fixture-match-card {
+  background: linear-gradient(145deg, #181d2c 0%, #131724 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+}
+
+:root[data-theme="sky"] .squad-card:hover,
+:root[data-theme="sky"] .fixture-match-card:hover {
+  border-color: rgba(94, 200, 248, 0.3) !important;
+}
+
+:root[data-theme="sky"] .assasins-header .squad-team-name {
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .battle-header .squad-team-name {
+  color: #ff6b85 !important;
+}
+
+:root[data-theme="sky"] .fixture-match-card.has-winner {
+  border-color: rgba(94, 200, 248, 0.35) !important;
+}
+
+:root[data-theme="sky"] .match-number-badge {
+  background: rgba(94, 200, 248, 0.12) !important;
+  border-color: rgba(94, 200, 248, 0.3) !important;
+  color: #5ec8f8 !important;
+  border-radius: 8px !important;
+}
+
+:root[data-theme="sky"] .match-outcome-badge.assasins {
+  background: rgba(94, 200, 248, 0.16) !important;
+  border-color: rgba(94, 200, 248, 0.4) !important;
+  color: #5ec8f8 !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .match-outcome-badge.battle {
+  background: rgba(255, 71, 102, 0.16) !important;
+  border-color: rgba(255, 71, 102, 0.4) !important;
+  color: #ff6b85 !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .match-outcome-badge.tied {
+  background: rgba(148, 163, 184, 0.16) !important;
+  border-color: rgba(148, 163, 184, 0.4) !important;
+  color: #cbd5e1 !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .btn-launch-match {
+  background: linear-gradient(135deg, #60cbf9 0%, #38bdf8 100%) !important;
+  color: #091120 !important;
+  font-weight: 800 !important;
+  border-radius: 9999px !important;
+}
+
+:root[data-theme="sky"] .info-chip {
+  background: #161b2a !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="sky"] .info-chip strong {
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .fixture-result-summary {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
+  border-radius: 10px !important;
+}
+
+:root[data-theme="sky"] .timing-notice-card {
+  background: #151a28 !important;
+  border: 1px solid rgba(94, 200, 248, 0.22) !important;
+  border-radius: 16px !important;
+}
+
+:root[data-theme="sky"] .notice-title {
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .notice-desc {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="sky"] .rule-card {
+  background: #161a28 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+:root[data-theme="sky"] .rule-title {
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .rule-text {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="sky"] .rule-highlight-pill {
+  background: rgba(94, 200, 248, 0.14) !important;
+  color: #5ec8f8 !important;
+  border: 1px solid rgba(94, 200, 248, 0.3) !important;
+}
+
+:root[data-theme="sky"] .tournament-leader-card {
+  background: #161a28 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+:root[data-theme="sky"] .tournament-leader-card span {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="sky"] .tournament-leader-card strong {
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .tournament-leader-card.runs b {
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .tournament-leader-card.wickets b {
+  color: #ff6b85 !important;
+}
+
+:root[data-theme="sky"] .tournament-stats-table-wrap {
+  background: #141824 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+}
+
+:root[data-theme="sky"] .tournament-stats-table th {
+  background: #1b2030 !important;
+  color: #5ec8f8 !important;
+  font-weight: 700 !important;
+}
+
+:root[data-theme="sky"] .tournament-stats-table td {
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+:root[data-theme="sky"] .tournament-stats-table tr:hover td {
+  background: rgba(94, 200, 248, 0.06) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .tournament-create-modal {
+  background: #141824 !important;
+  border: 1px solid rgba(94, 200, 248, 0.25) !important;
+  border-radius: 20px !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="sky"] .tournament-fab {
+  background: linear-gradient(135deg, #60cbf9 0%, #38bdf8 100%) !important;
+  color: #091120 !important;
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4) !important;
+}
+
+:root[data-theme="sky"] .player-directory-card {
+  border-radius: 20px !important;
+}
+
+:root[data-theme="sky"] .player-avatar-initials {
+  background: linear-gradient(135deg, #60cbf9 0%, #38bdf8 100%) !important;
+  color: #091120 !important;
+  font-weight: 800 !important;
+}
+
+:root[data-theme="sky"] .format-stat-box {
+  background: #121623 !important;
+  border-color: rgba(94, 200, 248, 0.16) !important;
+  border-radius: 12px !important;
+}
+
+:root[data-theme="sky"] .format-stat-box strong {
+  color: #5ec8f8 !important;
+}
+
+:root[data-theme="sky"] .setup-brand-title {
+  background: linear-gradient(135deg, #ffffff 0%, #5ec8f8 65%, #38bdf8 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
