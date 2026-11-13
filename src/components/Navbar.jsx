@@ -1,10 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, Users, Clock, History, Trophy } from 'lucide-react';
+import { LayoutDashboard, Users, Clock, History, Trophy, Gavel } from 'lucide-react';
 
 export default function Navbar({ activeTab, onTabChange, incompleteCount = 0 }) {
   const tabs = [
     { id: 'scorecard', label: 'Scorecard', icon: LayoutDashboard },
     { id: 'tournament', label: 'Tournament', icon: Trophy },
+    { id: 'auction', label: 'Auction', icon: Gavel },
     { id: 'players', label: 'Players', icon: Users },
     { id: 'incomplete', label: 'Incomplete', icon: Clock, badge: incompleteCount },
     { id: 'history', label: 'History', icon: History },

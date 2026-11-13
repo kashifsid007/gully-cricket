@@ -8,6 +8,7 @@ import HistoryScreen from './components/HistoryScreen';
 import PlayersTab from './components/PlayersTab';
 import IncompleteMatchesTab from './components/IncompleteMatchesTab';
 import TournamentTab from './components/TournamentTab';
+import AuctionTab from './components/AuctionTab';
 import Navbar from './components/Navbar';
 import {
   getSyncClientId,
@@ -952,6 +953,10 @@ export default function App() {
 
         {activeTab === 'tournament' && (
           <TournamentTab onStartTournamentMatch={handleStartTournamentMatch} />
+        )}
+
+        {activeTab === 'auction' && (
+          <AuctionTab onNavigateToTournament={() => navigateTo('tournament', 'SETUP')} />
         )}
 
         {activeTab === 'players' && (
