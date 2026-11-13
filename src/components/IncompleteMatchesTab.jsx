@@ -84,6 +84,11 @@ export default function IncompleteMatchesTab({ onResumeMatch }) {
                     <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--primary)' }}>
                       {currentInnings?.team}: {runs}/{wickets} <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>({oversStr} ov)</span>
                     </div>
+                    {match.matchSettings?.format === 'limited' && match.currentInningsIndex === 1 && match.inningsList?.[0] && (
+                      <div style={{ fontSize: '0.78rem', color: '#5ec8f8', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🎯 Need {Math.max(0, (match.inningsList[0].runs + 1) - runs)} runs in {Math.max(0, ((Number(match.matchSettings?.overs) || 5) * 6) - balls)} balls</span>
+                      </div>
+                    )}
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                       <Calendar size={12} /> {match.date}
                     </div>

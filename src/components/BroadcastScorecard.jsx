@@ -8,7 +8,7 @@ export default function BroadcastScorecard({
   isTest = false,
   inningsIndex = 0,
   stumpsStatus = null, // e.g. "Day 1 Stumps"
-  targetInfo = null,   // e.g. { runsNeeded, ballsRemaining, reqRunRate }
+  targetInfo = null,   // e.g. { target, runsNeeded, ballsRemaining, reqRunRate, isChasing, isFirstInnings, ... }
   inningsList = [],
 }) {
   const oversStr = `${Math.floor(balls / 6)}.${balls % 6}`;
@@ -43,27 +43,82 @@ export default function BroadcastScorecard({
           <span className="broadcast-corner-arrow" title="Live scorecard">↗</span>
         </div>
 
-        {/* ROW 1: TEAM CODE & SCORE */}
+        {/* ROW 1: TEAM CODE, SCORE & OVERS */}
         <div className="broadcast-row primary-row">
           <div className="broadcast-team-code">
             <span className="team-badge-icon">🏏</span>
             <span className="team-code-text">{teamCode}</span>
           </div>
-          <div className="broadcast-score-value">
-            {runs}-{wickets}
+          <div className="broadcast-score-with-overs">
+            <span className="broadcast-score-value">{runs}-{wickets}</span>
+            <span className="broadcast-overs-pill">({oversStr} ov)</span>
           </div>
         </div>
 
-        {/* ROW 2: OVERS */}
-        <div className="broadcast-row secondary-row">
-          <div className="broadcast-label">OVERS</div>
-          <div className="broadcast-value">{oversStr}</div>
+        {/* ROW 2: RATES DISPLAY */}
+        <div className="broadcast-row rates-row">
+          <div className="rate-item">
+            <span className="rate-label">CRR</span>
+            <span className="rate-value">{runRate}</span>
+          </div>
+          {targetInfo?.target != null && (
+            <div className="rate-item target-item">
+              <span className="rate-label">TARGET</span>
+              <span className="rate-value">{targetInfo.target}</span>
+            </div>
+          )}
+          {targetInfo?.isChasing && targetInfo?.reqRunRate && (
+            <div className="rate-item req-item">
+              <span className="rate-label">REQ RR</span>
+              <span className="rate-value">{targetInfo.reqRunRate}</span>
+            </div>
+          )}
         </div>
 
-        {/* ROW 3: RUN RATE */}
-        <div className="broadcast-row tertiary-row">
-          <div className="broadcast-runrate-label">RUN RATE</div>
-          <div className="broadcast-runrate-value">{runRate}</div>
+        {/* ROW 3: INTEGRATED LIVE STATUS BANNER INSIDE CARD */}
+        <div className={`broadcast-live-status-bar ${targetInfo?.isChasing ? 'is-chasing' : ''}`}>
+          {targetInfo?.isChasing ? (
+            <div className="broadcast-chase-status">
+              <span className="chase-pulse-dot" aria-hidden="true" />
+              <span className="chase-main-text">
+                {targetInfo.runsNeeded > 0 ? (
+                  <>
+                    <strong>{teamName}</strong> need <strong className="chase-highlight-runs">{targetInfo.runsNeeded}</strong> {targetInfo.runsNeeded === 1 ? 'run' : 'runs'} in <strong className="chase-highlight-balls">{targetInfo.ballsRemaining}</strong> {targetInfo.ballsRemaining === 1 ? 'ball' : 'balls'}
+                    {hasBallLimit && targetInfo.ballsRemaining > 0 && (
+                      <span className="chase-sub-detail">
+                        {' '}({Math.floor(targetInfo.ballsRemaining / 6)}.{targetInfo.ballsRemaining % 6} ov)
+                      </span>
+                    )}
+                  </>
+                ) : targetInfo.runsNeeded === 0 ? (
+                  <>
+                    ⚖️ <strong>Scores Level!</strong> Need 1 run in {targetInfo.ballsRemaining} balls to win
+                  </>
+                ) : (
+                  <>
+                    🏆 <strong>Target Achieved!</strong> {teamName} won the match!
+                  </>
+                )}
+              </span>
+            </div>
+          ) : targetInfo?.isFirstInnings ? (
+            <div className="broadcast-chase-status first-inn">
+              <span className="chase-pulse-dot first-inn" aria-hidden="true" />
+              <span className="chase-main-text">
+                1st Innings: <strong>{targetInfo.firstInnBallsLeft}</strong> balls left • Projected: <strong>{targetInfo.projectedScore}</strong>
+              </span>
+            </div>
+          ) : targetInfo?.chaseStatusText ? (
+            <div className="broadcast-chase-status">
+              <span className="chase-pulse-dot" aria-hidden="true" />
+              <span className="chase-main-text">{targetInfo.chaseStatusText}</span>
+            </div>
+          ) : (
+            <div className="broadcast-chase-status">
+              <span className="chase-pulse-dot" aria-hidden="true" />
+              <span className="chase-main-text">Live Match • Run Rate: {runRate}</span>
+            </div>
+          )}
         </div>
 
         {/* Stumps Banner (If declared Stumps in Test match) */}
@@ -73,26 +128,6 @@ export default function BroadcastScorecard({
           </div>
         )}
       </div>
-
-      {/* Target Chasing Bar (if applicable) */}
-      {targetInfo && targetInfo.runsNeeded > 0 && (
-        <div className="broadcast-target-bar" role="status">
-          <div className="broadcast-target-heading">
-            🎯 TARGET: {targetInfo.target}
-          </div>
-          <div className="broadcast-target-message">
-            {targetInfo.teamName} need <strong>{targetInfo.runsNeeded}</strong>{' '}
-            {targetInfo.runsNeeded === 1 ? 'run' : 'runs'}{' '}
-            {hasBallLimit ? (
-              <>
-                from <strong>{targetInfo.ballsRemaining}</strong>{' '}
-                {targetInfo.ballsRemaining === 1 ? 'ball' : 'balls'} to win
-                {targetInfo.ballsRemaining > 0 && ` • Required RR: ${targetInfo.reqRunRate}`}
-              </>
-            ) : 'to win'}
-          </div>
-        </div>
-      )}
 
       {/* Test Match Innings Summary Pills */}
       {isTest && inningsList && inningsList.length > 0 && (

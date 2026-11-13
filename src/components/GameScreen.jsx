@@ -3,7 +3,7 @@ import { Undo, ArrowRight, Share2, Moon } from 'lucide-react';
 import BroadcastScorecard from './BroadcastScorecard';
 import BroadcastPlayerBanner from './BroadcastPlayerBanner';
 import ShareModal from './ShareModal';
-import { getPlayerByName, autoRegisterPlayer } from '../utils/playerDb';
+import { autoRegisterPlayer } from '../utils/playerDb';
 import { getTeamSquad } from '../utils/squadDb';
 
 export default function GameScreen({
@@ -82,11 +82,6 @@ export default function GameScreen({
     if (bowlerName) autoRegisterPlayer(bowlerName);
   }, [strikerName, nonStrikerName, bowlerName]);
 
-  // Fetch player profiles from DB (for photo avatars)
-  const strikerProfile = getPlayerByName(strikerName);
-  const nonStrikerProfile = getPlayerByName(nonStrikerName);
-  const bowlerProfile = getPlayerByName(bowlerName);
-
   // Helper calculations
   const totalRuns = currentInnings.runs || 0;
   const totalWickets = currentInnings.wickets || 0;
@@ -99,32 +94,92 @@ export default function GameScreen({
   const nonStrikerStats = currentInnings.batsmen?.[nonStrikerName] || { runs: 0, balls: 0, fours: 0, sixes: 0 };
   const bowlerStats = currentInnings.bowlers?.[bowlerName] || { balls: 0, maidens: 0, runs: 0, wickets: 0 };
 
-  // Calculate target and required runs
+  // Calculate target, required runs, and live status
   let target = null;
   let runsNeeded = null;
   let ballsRemaining = null;
   let reqRunRate = null;
+  let chaseStatusText = '';
 
   const isLimited = matchSettings.format === 'limited';
+  const totalOvers = Number(matchSettings.overs) || 5;
+  const maxBalls = totalOvers * 6;
+  const firstInnBallsLeft = Math.max(0, maxBalls - totalBalls);
+  const projectedScore = totalBalls > 0 ? Math.round((totalRuns / totalBalls) * maxBalls) : maxBalls;
+
+  const isChasing = isLimited ? currentInningsIndex === 1 : (isTest && currentInningsIndex === 3);
+  const isFirstInnings = isLimited && currentInningsIndex === 0;
 
   if (isLimited && currentInningsIndex === 1) {
-    const firstInnings = inningsList[0];
+    const firstInnings = inningsList[0] || { runs: 0, wickets: 0, balls: 0 };
     target = firstInnings.runs + 1;
     runsNeeded = Math.max(0, target - totalRuns);
-    ballsRemaining = Math.max(0, (matchSettings.overs * 6) - totalBalls);
-    reqRunRate = ballsRemaining > 0 ? ((runsNeeded / ballsRemaining) * 6).toFixed(2) : '0.00';
-  } else if (isTest && currentInningsIndex === 3) {
-    const battingTeam = currentInnings.team;
-    const bowlingTeam = currentInnings.bowlingTeam;
-    const battingInnings1 = inningsList.find((inn, idx) => idx < 3 && inn.team === battingTeam);
-    const bowlingInningsList = inningsList.filter((inn, idx) => idx < 3 && inn.team === bowlingTeam);
-    
-    if (battingInnings1 && bowlingInningsList.length === 2) {
-      const bowlingTeamTotal = bowlingInningsList[0].runs + bowlingInningsList[1].runs;
-      target = bowlingTeamTotal - battingInnings1.runs + 1;
-      runsNeeded = target - totalRuns;
+    ballsRemaining = Math.max(0, maxBalls - totalBalls);
+    reqRunRate = ballsRemaining > 0 ? ((runsNeeded / ballsRemaining) * 6).toFixed(2) : (runsNeeded === 0 ? '0.00' : '99.99');
+
+    if (runsNeeded > 1) {
+      chaseStatusText = `${currentInnings.team} need ${runsNeeded} runs in ${ballsRemaining} balls`;
+    } else if (runsNeeded === 1) {
+      chaseStatusText = `Scores Level! ${currentInnings.team} need 1 run in ${ballsRemaining} balls to win`;
+    } else {
+      chaseStatusText = `Target Achieved! ${currentInnings.team} won the match!`;
+    }
+  } else if (isLimited && currentInningsIndex === 0) {
+    chaseStatusText = `1st Innings: ${firstInnBallsLeft} balls remaining (${Math.floor(firstInnBallsLeft / 6)}.${firstInnBallsLeft % 6} ov) • Projected: ${projectedScore}`;
+  } else if (isTest) {
+    if (currentInningsIndex === 3) {
+      const battingTeam = currentInnings.team;
+      const bowlingTeam = currentInnings.bowlingTeam;
+      const battingInnings1 = inningsList.find((inn, idx) => idx < 3 && inn.team === battingTeam);
+      const bowlingInningsList = inningsList.filter((inn, idx) => idx < 3 && inn.team === bowlingTeam);
+      
+      if (battingInnings1 && bowlingInningsList.length === 2) {
+        const bowlingTeamTotal = bowlingInningsList[0].runs + bowlingInningsList[1].runs;
+        target = Math.max(1, bowlingTeamTotal - battingInnings1.runs + 1);
+        runsNeeded = Math.max(0, target - totalRuns);
+        if (runsNeeded > 1) {
+          chaseStatusText = `${currentInnings.team} need ${runsNeeded} runs to win`;
+        } else if (runsNeeded === 1) {
+          chaseStatusText = `Scores Level! ${currentInnings.team} need 1 run to win`;
+        } else {
+          chaseStatusText = `Target Achieved! ${currentInnings.team} won the match!`;
+        }
+      }
+    } else if (currentInningsIndex === 1) {
+      const inn0 = inningsList[0] || { runs: 0 };
+      if (totalRuns < inn0.runs) {
+        chaseStatusText = `1st Innings: ${currentInnings.team} trail by ${inn0.runs - totalRuns} runs`;
+      } else if (totalRuns > inn0.runs) {
+        chaseStatusText = `1st Innings: ${currentInnings.team} lead by ${totalRuns - inn0.runs} runs`;
+      } else {
+        chaseStatusText = `1st Innings: Scores level at ${totalRuns}`;
+      }
+    } else if (currentInningsIndex === 2) {
+      const inn0 = inningsList[0]?.runs || 0;
+      const inn1 = inningsList[1]?.runs || 0;
+      const diff = (inn0 + totalRuns) - inn1;
+      if (diff > 0) {
+        chaseStatusText = `2nd Innings: ${currentInnings.team} lead by ${diff} runs`;
+      } else if (diff < 0) {
+        chaseStatusText = `2nd Innings: ${currentInnings.team} trail by ${Math.abs(diff)} runs`;
+      } else {
+        chaseStatusText = `2nd Innings: Scores level`;
+      }
     }
   }
+
+  const targetInfo = {
+    target,
+    teamName: currentInnings.team,
+    runsNeeded,
+    ballsRemaining,
+    reqRunRate,
+    chaseStatusText,
+    isChasing,
+    isFirstInnings,
+    firstInnBallsLeft,
+    projectedScore,
+  };
 
   // Handle Day Stumps (Test format)
   const handleDeclareStumps = () => {
@@ -277,13 +332,7 @@ export default function GameScreen({
         isTest={isTest}
         inningsIndex={currentInningsIndex}
         stumpsStatus={stumpsStatus}
-        targetInfo={runsNeeded > 0 ? {
-          target,
-          teamName: currentInnings.team,
-          runsNeeded,
-          ballsRemaining,
-          reqRunRate,
-        } : null}
+        targetInfo={targetInfo}
         inningsList={inningsList}
       />
 
@@ -298,6 +347,71 @@ export default function GameScreen({
         onSwapBatsmen={onSwapBatsmen}
         onRenameClick={handleRenameClick}
       />
+
+      {/* PERSISTENT LIVE MATCH STATUS & CHASE BANNER ON SCREEN */}
+      <div className={`live-screen-chase-banner ${isChasing ? 'is-chase' : 'is-first-inn'}`} role="status">
+        {isChasing ? (
+          <div className="chase-banner-content">
+            <div className="chase-banner-primary">
+              <span className="chase-badge-tag">🎯 LIVE CHASE</span>
+              <span className="chase-stat-headline">
+                {runsNeeded > 0 ? (
+                  <>
+                    Need <strong className="chase-glow-val">{runsNeeded}</strong> {runsNeeded === 1 ? 'run' : 'runs'} in <strong className="chase-glow-val">{ballsRemaining}</strong> {ballsRemaining === 1 ? 'ball' : 'balls'}
+                  </>
+                ) : runsNeeded === 0 ? (
+                  <>
+                    ⚖️ Scores Level! Need 1 run in {ballsRemaining} balls to win
+                  </>
+                ) : (
+                  <>
+                    🏆 Target Achieved! {currentInnings.team} won the match!
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="chase-banner-meta">
+              <span>Target: <strong>{target}</strong></span>
+              <span className="meta-sep">•</span>
+              <span>Req RR: <strong>{reqRunRate}</strong></span>
+              {ballsRemaining != null && (
+                <>
+                  <span className="meta-sep">•</span>
+                  <span>Overs Left: <strong>{Math.floor(ballsRemaining / 6)}.{ballsRemaining % 6}</strong></span>
+                </>
+              )}
+            </div>
+          </div>
+        ) : isFirstInnings ? (
+          <div className="chase-banner-content">
+            <div className="chase-banner-primary">
+              <span className="chase-badge-tag first-inn">🏏 1ST INNINGS</span>
+              <span className="chase-stat-headline">
+                <strong>{firstInnBallsLeft}</strong> balls left in innings ({oversStr} bowled)
+              </span>
+            </div>
+            <div className="chase-banner-meta">
+              <span>Current RR: <strong>{runRate}</strong></span>
+              <span className="meta-sep">•</span>
+              <span>Projected: <strong>{projectedScore}</strong></span>
+              <span className="meta-sep">•</span>
+              <span>Match: <strong>{totalOvers} Overs</strong></span>
+            </div>
+          </div>
+        ) : (
+          <div className="chase-banner-content">
+            <div className="chase-banner-primary">
+              <span className="chase-badge-tag">🏏 STATUS</span>
+              <span className="chase-stat-headline">
+                {chaseStatusText || `Innings ${currentInningsIndex + 1}`}
+              </span>
+            </div>
+            <div className="chase-banner-meta">
+              <span>Current RR: <strong>{runRate}</strong></span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Over History Bubble Feed */}
       <div className="over-balls-container" style={{ marginTop: '12px' }}>
